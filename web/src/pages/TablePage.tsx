@@ -306,7 +306,7 @@ export function TablePage() {
               landed={table.kind === 'rng' ? landed.player : undefined} squeeze={table.kind === 'live'} revealed={revealed} onReveal={reveal} />
             {/* 派彩阶段：阶段/胜方/输赢挪到牌桌右上角，中间留给开局倒计时（中间仍保留占位，庄闲位置不动） */}
             <div className={`phase-box ${table.phase === 'settling' ? 'corner' : ''}`}>
-              <div className={`phase ${table.phase}`} style={betting && secs <= 5 ? { visibility: 'hidden' } : undefined}>{betting ? `投注 ${secs}s` : PHASE_LABEL[table.phase]}</div>
+              <div className={`phase ${table.phase} ${betting && secs <= 5 ? 'closing' : ''}`}>{betting ? (secs <= 5 ? '确认下注' : `投注 ${secs}s`) : PHASE_LABEL[table.phase]}</div>
               {showResult && <div className={`outcome ${r!.outcome}`}>{r!.outcome === 'banker' ? '庄赢' : r!.outcome === 'player' ? '闲赢' : '和局'}</div>}
               {lastSettle !== null && <div className={`settle ${lastSettle >= 0 ? 'win' : 'lose'}`}>{lastSettle >= 0 ? '+' : ''}{lastSettle.toLocaleString()}</div>}
             </div>
