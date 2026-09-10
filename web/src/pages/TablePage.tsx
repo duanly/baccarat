@@ -212,13 +212,14 @@ export function TablePage() {
   const allRevealed = !table || table.kind !== 'live' || [...table.playerCards.keys()].every((i) => revealed.has('player' + i)) && [...table.bankerCards.keys()].every((i) => revealed.has('banker' + i));
   const showResult = !!table && table.phase === 'settling' && !!r && allRevealed;
 
-  // 开奖（且咪牌桌全部翻开）→ 结算画面 1.5s + 渐隐 1.3s → 清空桌面 + 派彩动画 + 开局 3 秒倒计时（服务端派彩停顿 6s）
+  // 开奖（且咪牌桌全部翻开）→ 结算画面 1.5s → 渐隐 3s + 开局倒计时 3s（同步）→ 开始下注 + 派彩动画 + 开局 3 秒倒计时（服务端派彩停顿 6s）
   useEffect(() => {
     if (!showResult || payoutDone.current) return;
     payoutDone.current = true;
     setOverlay(true); setOverlayOut(false);
-    const t0 = setTimeout(() => setOverlayOut(true), 1500);                                          // 1.5s 后开始淡出
-    const t1 = setTimeout(() => { setOverlay(false); setOverlayOut(false); setCleared(true); runPayout(); }, 2800);  // 淡出 1.3s 结束
+    // 1.5s 后：开局 3 秒倒计时开始，结算画面同步用 3s 渐隐，桌面清空 + 派彩动画；倒计时归零时画面刚好消失，服务端开下一局
+    const t0 = setTimeout(() => { setOverlayOut(true); setCleared(true); runPayout(); }, 1500);
+    const t1 = setTimeout(() => { setOverlay(false); setOverlayOut(false); }, 4500);
     return () => { clearTimeout(t0); clearTimeout(t1); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showResult]);

@@ -340,7 +340,7 @@ function TableSettings({ onError }: { onError: (m: string) => void }) {
   const FIELDS: { k: string; label: string; unit: string; step?: number }[] = [
     { k: 'bettingSeconds', label: '下注时长', unit: '秒' },
     { k: 'dealIntervalMs', label: '发牌间隔', unit: '毫秒', step: 100 },
-    { k: 'resultPauseSeconds', label: '派彩停顿', unit: '秒' },
+    { k: 'resultPauseSeconds', label: '派彩停顿', unit: '秒', step: 0.5 },
     { k: 'minBet', label: '最低注', unit: '$' },
     { k: 'maxBet', label: '最高注', unit: '$' },
     { k: 'maxSideBet', label: '边注上限', unit: '$' },
@@ -364,7 +364,7 @@ function TableSettings({ onError }: { onError: (m: string) => void }) {
 
   return (
     <div className="table-settings">
-      <div className="muted small" style={{ padding: '8px 16px' }}>修改后点「保存」立即写入，下一局开始生效（正在进行的倒计时不打断）。发牌间隔含飞牌动画，建议 1500–3000 毫秒。</div>
+      <div className="muted small" style={{ padding: '8px 16px' }}>修改后点「保存」立即写入，下一局开始生效（正在进行的倒计时不打断）。发牌间隔含飞牌动画，建议 1500–3000 毫秒；派彩停顿最少 4.5 秒（结算画面 1.5s + 开局倒计时 3s）。</div>
       {data.halls.map((h) => (
         <div key={h.id} className="ts-hall">
           <div className="panel-title">{h.name} <span className="muted small">{h.kind === 'vip' ? '真人荷官' : 'RNG 自动'}</span></div>

@@ -137,7 +137,7 @@ export class BaccaratTable extends EventEmitter {
       maxBet: 10000,
       maxSideBet: 1000,
       bettingSeconds: cfg.kind === 'rng' ? 15 : 20,
-      resultPauseSeconds: cfg.kind === 'rng' ? 6 : 9,   // 结算画面 2.8s + 派彩动画/开局倒计时 3s
+      resultPauseSeconds: cfg.kind === 'rng' ? 4.5 : 9,   // 结算画面 1.5s + 渐隐/开局倒计时 3s
       dealIntervalMs: 2200,                            // 逐张发牌间隔（放慢，含飞牌动画）
       payouts: DEFAULT_PAYOUTS,
       ...cfg,
@@ -150,7 +150,7 @@ export class BaccaratTable extends EventEmitter {
     const next = {
       bettingSeconds: clamp(patch.bettingSeconds, 5, 120),
       dealIntervalMs: clamp(patch.dealIntervalMs, 500, 10000),
-      resultPauseSeconds: clamp(patch.resultPauseSeconds, 4, 60),
+      resultPauseSeconds: clamp(patch.resultPauseSeconds, 4.5, 60),
       minBet: clamp(patch.minBet, 1, 1e9),
       maxBet: clamp(patch.maxBet, 1, 1e9),
       maxSideBet: clamp(patch.maxSideBet, 1, 1e9),

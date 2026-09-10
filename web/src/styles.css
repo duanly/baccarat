@@ -826,7 +826,7 @@ html, body { overscroll-behavior: none; }
 .table-page.landscape { overscroll-behavior: none; overscroll-behavior-y: none; }
 
 /* 结算画面淡出 */
-.settle-overlay.out { animation: settleOut 1.3s ease-in-out forwards; pointer-events: none; }
+.settle-overlay.out { animation: settleOut 3s linear forwards; pointer-events: none; }
 @keyframes settleOut { from { opacity: 1; } to { opacity: 0; } }
 
 /* ---------- 限红水印：牌桌左上角（横竖屏一致）；顶栏只显示"第 N 局"，窄屏也显示 ---------- */
@@ -870,3 +870,6 @@ html, body { overscroll-behavior: none; }
 /* 投注最后 5 秒：右上角标签变为"确认下注"并闪烁提醒 */
 .phase.betting.closing { background: var(--gold); color: #1a1400; font-weight: 700; animation: blinkGold 1s ease-in-out infinite; }
 @keyframes blinkGold { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+/* 流水列左对齐（从列中部起），输赢列靠最右 */
+.lb th:nth-child(4), .lb td:nth-child(4) { text-align: left; padding-left: 10px; }
+.lb th:nth-child(5), .lb td:nth-child(5) { text-align: right; padding-right: 8px; }

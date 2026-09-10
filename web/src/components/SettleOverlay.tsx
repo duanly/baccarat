@@ -11,7 +11,6 @@ export function SettleOverlay({ result, myNet, onClick, out }: { result: HandRes
   if (r.playerPair) tags.push('闲对');
   if (r.bankerPair) tags.push('庄对');
   if (r.outcome === 'banker' && r.bankerTotal === 6) tags.push('幸运6');
-  if (r.outcome === 'banker' && r.bankerTotal === 7) tags.push('幸运7');
   if (r.playerTotal >= 8 && r.playerCardCount === 2 || r.bankerTotal >= 8 && r.bankerCardCount === 2) tags.push('天牌');
   return (
     <div className={`settle-overlay ${out ? 'out' : ''}`} onClick={onClick}>
