@@ -795,3 +795,11 @@ tr.dirty td { background: rgba(212,175,55,.08); }
 .table-page .spot-amount, .table-page.landscape .spot-amount { left: 50%; right: auto; top: auto; bottom: 3px; transform: translateX(-50%); margin: 0; white-space: nowrap; }
 .table-page .others-wrap, .table-page.landscape .others-wrap { left: 4px; bottom: 3px; right: auto; top: auto; }
 .table-page .allin-badge { top: 3px; right: 4px; }
+
+/* ---------- 阶段标签（投注 Ns / 发牌中 …）横竖屏统一：牌桌右上角；庄闲两栏平分，不再留中间列 ---------- */
+.table-page .hands { top: 0; bottom: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: end; padding-bottom: 12%; }
+.table-page .hands .phase-box { position: absolute; right: 8px; top: 8px; left: auto; bottom: auto; transform: none; grid-column: auto; grid-row: auto; min-width: 0; display: flex; }
+.table-page .hands .phase-box.placeholder { display: none; }
+.table-page .hands .phase-box .outcome, .table-page .hands .phase-box .settle { display: none; }
+.table-page.portrait .hands { padding-bottom: 6%; }
+.table-page .phase-box .phase { font-size: 12px; padding: 2px 9px; }
