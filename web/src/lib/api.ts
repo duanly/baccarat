@@ -59,4 +59,7 @@ export const admin = {
   transactions: (id: number, kind?: string) => req<{ items: any[] }>('GET', `/admin/players/${id}/transactions${qs({ kind })}`),
   bets: (id: number) => req<{ items: any[] }>('GET', `/admin/players/${id}/bets`),
   sessions: (id: number) => req<{ items: any[] }>('GET', `/admin/players/${id}/sessions`),
+  tables: () => req<{ halls: any[]; items: any[] }>('GET', '/admin/tables'),
+  updateTable: (id: string, patch: Record<string, number | undefined>) => req<any>('PATCH', `/admin/tables/${id}`, patch),
+  applyHall: (from: string, hallId: string) => req<{ updated: number }>('POST', '/admin/tables/apply-hall', { from, hallId }),
 };

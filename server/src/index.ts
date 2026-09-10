@@ -31,6 +31,13 @@ const presence = new Presence(db);
 auth.ensureAdmin(ADMIN_USER, ADMIN_PASS);
 const tables = new TableManager(wallet, new SqlitePersistence(db));
 seedDefaultLayout(tables, { mediaBase: MEDIA_BASE, rngTables: Number(process.env.RNG_TABLES ?? 12), vipHalls: Number(process.env.VIP_HALLS ?? 3) });
+// 后台保存过的每桌参数（下注时长 / 发牌间隔 / 派彩停顿 / 限红）
+for (const row of db.prepare('SELECT * FROM table_settings').all() as any[]) {
+  tables.tables.get(row.table_id)?.updateSettings({
+    bettingSeconds: row.betting_seconds ?? undefined, dealIntervalMs: row.deal_interval_ms ?? undefined, resultPauseSeconds: row.result_pause_seconds ?? undefined,
+    minBet: row.min_bet ?? undefined, maxBet: row.max_bet ?? undefined, maxSideBet: row.max_side_bet ?? undefined,
+  });
+}
 
 const app = express();
 app.use(express.json());
@@ -42,7 +49,7 @@ app.use((_req, res, next) => {
   next();
 });
 app.get('/health', (_req, res) => res.json({ ok: true, tables: tables.tables.size }));
-app.use('/api/admin', adminRouter({ db, auth, wallet, presence }));
+app.use('/api/admin', adminRouter({ db, auth, wallet, presence, tables }));
 app.use('/api', apiRouter({ auth, wallet, tables, db, dealerApiKey: DEALER_API_KEY }));
 
 // 生产：托管前端构建产物

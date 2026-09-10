@@ -10,14 +10,16 @@
  *  GET  /api/admin/players/:id/transactions    上下分与流水日志（kind 过滤）
  *  GET  /api/admin/players/:id/bets            下注输赢日志
  *  GET  /api/admin/players/:id/sessions        登录会话（IP / 设备 / 时长）
+ *  GET  /api/admin/tables                      牌桌参数列表   PATCH /:id 修改（下注时长 / 发牌间隔 / 派彩停顿 / 限红，下一局生效）
  */
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import type { DB } from '../db/index.js';
 import { AuthService, HttpError } from '../auth.js';
 import type { Wallet } from '../wallet.js';
 import type { Presence } from '../presence.js';
+import type { TableManager } from '../game/manager.js';
 
-interface Deps { db: DB; auth: AuthService; wallet: Wallet; presence: Presence }
+interface Deps { db: DB; auth: AuthService; wallet: Wallet; presence: Presence; tables: TableManager }
 
 export function adminRouter(d: Deps): Router {
   const r = Router();
@@ -43,6 +45,49 @@ export function adminRouter(d: Deps): Router {
       .get(today, today, today, today, today) as any;
     const online = [...d.presence.onlineIds()].filter((id) => (d.db.prepare('SELECT role FROM users WHERE id = ?').get(id) as any)?.role === 'player').length;
     res.json({ ...row, online });
+  });
+
+  // ---------- 牌桌参数 ----------
+  const tableRow = (t: import('../game/table.js').BaccaratTable) => ({
+    id: t.cfg.id, name: t.cfg.name, kind: t.cfg.kind, hallId: t.cfg.hallId, phase: t.phase, roundNo: t.roundNo,
+    online: t.snapshot().playersOnline,
+    bettingSeconds: t.cfg.bettingSeconds, dealIntervalMs: t.cfg.dealIntervalMs, resultPauseSeconds: t.cfg.resultPauseSeconds,
+    minBet: t.cfg.minBet, maxBet: t.cfg.maxBet, maxSideBet: t.cfg.maxSideBet,
+  });
+  r.get('/tables', (_req, res) => {
+    res.json({ halls: d.tables.halls.map((h) => ({ id: h.id, name: h.name, kind: h.kind })), items: [...d.tables.tables.values()].map(tableRow) });
+  });
+  r.patch('/tables/:id', (req, res) => {
+    const t = d.tables.tables.get(req.params.id);
+    if (!t) throw new HttpError(404, '牌桌不存在');
+    const num = (v: unknown) => (v === undefined || v === null || v === '' ? undefined : Number(v));
+    const patch = {
+      bettingSeconds: num(req.body?.bettingSeconds), dealIntervalMs: num(req.body?.dealIntervalMs), resultPauseSeconds: num(req.body?.resultPauseSeconds),
+      minBet: num(req.body?.minBet), maxBet: num(req.body?.maxBet), maxSideBet: num(req.body?.maxSideBet),
+    };
+    t.updateSettings(patch);
+    d.db.prepare(`INSERT INTO table_settings (table_id, betting_seconds, deal_interval_ms, result_pause_seconds, min_bet, max_bet, max_side_bet, updated_at)
+                  VALUES (?,?,?,?,?,?,?,?)
+                  ON CONFLICT(table_id) DO UPDATE SET betting_seconds=excluded.betting_seconds, deal_interval_ms=excluded.deal_interval_ms,
+                    result_pause_seconds=excluded.result_pause_seconds, min_bet=excluded.min_bet, max_bet=excluded.max_bet, max_side_bet=excluded.max_side_bet, updated_at=excluded.updated_at`)
+      .run(t.cfg.id, t.cfg.bettingSeconds, t.cfg.dealIntervalMs, t.cfg.resultPauseSeconds, t.cfg.minBet, t.cfg.maxBet, t.cfg.maxSideBet, Date.now());
+    res.json(tableRow(t));
+  });
+  // 一键应用到同厅所有桌
+  r.post('/tables/apply-hall', (req, res) => {
+    const hallId = String(req.body?.hallId ?? '');
+    const src = d.tables.tables.get(String(req.body?.from ?? ''));
+    if (!src) throw new HttpError(404, '源牌桌不存在');
+    const patch = { bettingSeconds: src.cfg.bettingSeconds, dealIntervalMs: src.cfg.dealIntervalMs, resultPauseSeconds: src.cfg.resultPauseSeconds, minBet: src.cfg.minBet, maxBet: src.cfg.maxBet, maxSideBet: src.cfg.maxSideBet };
+    const stmt = d.db.prepare(`INSERT OR REPLACE INTO table_settings (table_id, betting_seconds, deal_interval_ms, result_pause_seconds, min_bet, max_bet, max_side_bet, updated_at) VALUES (?,?,?,?,?,?,?,?)`);
+    let n = 0;
+    for (const t of d.tables.tables.values()) {
+      if (t.cfg.hallId !== hallId || t === src) continue;
+      t.updateSettings(patch);
+      stmt.run(t.cfg.id, t.cfg.bettingSeconds, t.cfg.dealIntervalMs, t.cfg.resultPauseSeconds, t.cfg.minBet, t.cfg.maxBet, t.cfg.maxSideBet, Date.now());
+      n++;
+    }
+    res.json({ updated: n });
   });
 
   // ---------- 组别 ----------

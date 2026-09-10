@@ -133,12 +133,27 @@ export class BaccaratTable extends EventEmitter {
       minBet: 10,
       maxBet: 10000,
       maxSideBet: 1000,
-      bettingSeconds: cfg.kind === 'rng' ? 12 : 20,
+      bettingSeconds: cfg.kind === 'rng' ? 15 : 20,
       resultPauseSeconds: cfg.kind === 'rng' ? 6 : 9,   // 结算画面 2.8s + 派彩动画/开局倒计时 3s
-      dealIntervalMs: 1500,                            // 逐张发牌间隔（放慢，含飞牌动画）
+      dealIntervalMs: 2200,                            // 逐张发牌间隔（放慢，含飞牌动画）
       payouts: DEFAULT_PAYOUTS,
       ...cfg,
     };
+  }
+
+  /** 后台调整参数：下一局生效（正在进行的倒计时不打断） */
+  updateSettings(patch: Partial<Pick<TableConfig, 'bettingSeconds' | 'dealIntervalMs' | 'resultPauseSeconds' | 'minBet' | 'maxBet' | 'maxSideBet'>>) {
+    const clamp = (v: unknown, lo: number, hi: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : undefined);
+    const next = {
+      bettingSeconds: clamp(patch.bettingSeconds, 5, 120),
+      dealIntervalMs: clamp(patch.dealIntervalMs, 500, 10000),
+      resultPauseSeconds: clamp(patch.resultPauseSeconds, 4, 60),
+      minBet: clamp(patch.minBet, 1, 1e9),
+      maxBet: clamp(patch.maxBet, 1, 1e9),
+      maxSideBet: clamp(patch.maxSideBet, 1, 1e9),
+    };
+    for (const [k, v] of Object.entries(next)) if (v !== undefined) (this.cfg as any)[k] = v;
+    this.emit('settings', { tableId: this.cfg.id });
   }
 
   // ---------- 生命周期 ----------

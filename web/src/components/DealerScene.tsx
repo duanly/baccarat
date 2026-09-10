@@ -64,7 +64,7 @@ function Flyer({ flight, shoeRef, onLanded }: { flight: Flight; shoeRef: React.R
         { transform: `translate(${(to.x - from.x) * 0.5}px, ${(to.y - from.y) * 0.35}px) rotate(180deg) scale(1)`, offset: 0.5 },
         { transform: `translate(${to.x - from.x}px, ${to.y - from.y}px) rotate(360deg) scale(1)`, opacity: 1 },
       ],
-      { duration: 620, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' },
+      { duration: 800, easing: 'cubic-bezier(.2,.8,.3,1)', fill: 'forwards' },
     );
     anim.onfinish = () => onLanded(flight.id);
     return () => anim.cancel();

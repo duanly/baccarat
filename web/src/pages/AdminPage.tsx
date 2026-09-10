@@ -25,6 +25,7 @@ export function AdminPage() {
   const [list, setList] = useState<{ total: number; items: any[] }>({ total: 0, items: [] });
   const [selected, setSelected] = useState<number | null>(null);
   const [err, setErr] = useState('');
+  const [view, setView] = useState<'players' | 'tables'>('players');
 
   const loadGroups = useCallback(() => admin.groups().then((r) => setGroups(r.items)).catch((e) => setErr(e.message)), []);
   const loadList = useCallback(() => {
@@ -56,8 +57,16 @@ export function AdminPage() {
       <header className="topbar">
         <Link to="/" className="ghost">‹ 大厅</Link>
         <div className="brand">玩家管理 <span className="muted small">Admin</span></div>
+        <div className="hall-tabs">
+          <button className={view === 'players' ? 'active' : ''} onClick={() => setView('players')}>玩家</button>
+          <button className={view === 'tables' ? 'active' : ''} onClick={() => setView('tables')}>牌桌设置</button>
+        </div>
         <div className="userbar"><span>{user?.nickname}</span><button className="ghost" onClick={logout}>退出</button></div>
       </header>
+
+      {view === 'tables' && <TableSettings onError={setErr} />}
+      {view === 'tables' && err && <div className="error" onClick={() => setErr('')}>{err}</div>}
+      {view === 'players' && <>
 
       {summary && (
         <div className="stat-row">
@@ -124,6 +133,7 @@ export function AdminPage() {
       </div>
 
       {selected !== null && <PlayerDrawer id={selected} groups={groups} onClose={() => setSelected(null)} onChanged={() => { loadList(); admin.summary().then(setSummary).catch(() => {}); }} />}
+      </>}
     </div>
   );
 }
@@ -315,4 +325,75 @@ function PlayerDrawer({ id, groups, onClose, onChanged }: { id: number; groups: 
 
 function Kv({ k, v, sub, tone }: { k: string; v: React.ReactNode; sub?: string; tone?: string }) {
   return <div className="kv"><div className="muted small">{k}</div><div className={`kv-v ${tone ?? ''}`}>{v}</div>{sub && <div className="muted small">{sub}</div>}</div>;
+}
+
+
+/** 牌桌参数：下注时长 / 发牌间隔 / 派彩停顿 / 限红，改完即存，下一局生效 */
+function TableSettings({ onError }: { onError: (m: string) => void }) {
+  const [data, setData] = useState<{ halls: any[]; items: any[] } | null>(null);
+  const [draft, setDraft] = useState<Record<string, any>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+  const load = useCallback(() => admin.tables().then(setData).catch((e) => onError(e.message)), [onError]);
+  useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t); }, [load]);
+  if (!data) return <div className="center muted">加载中…</div>;
+
+  const FIELDS: { k: string; label: string; unit: string; step?: number }[] = [
+    { k: 'bettingSeconds', label: '下注时长', unit: '秒' },
+    { k: 'dealIntervalMs', label: '发牌间隔', unit: '毫秒', step: 100 },
+    { k: 'resultPauseSeconds', label: '派彩停顿', unit: '秒' },
+    { k: 'minBet', label: '最低注', unit: '$' },
+    { k: 'maxBet', label: '最高注', unit: '$' },
+    { k: 'maxSideBet', label: '边注上限', unit: '$' },
+  ];
+  const val = (t: any, k: string) => draft[t.id]?.[k] ?? t[k];
+  const dirty = (t: any) => !!draft[t.id] && FIELDS.some((f) => draft[t.id][f.k] !== undefined && Number(draft[t.id][f.k]) !== t[f.k]);
+  const save = async (t: any) => {
+    setSaving(t.id);
+    try {
+      const patch: Record<string, number> = {};
+      for (const f of FIELDS) patch[f.k] = Number(val(t, f.k));
+      await admin.updateTable(t.id, patch);
+      setDraft((d) => { const n = { ...d }; delete n[t.id]; return n; });
+      await load();
+    } catch (e: any) { onError(e.message); } finally { setSaving(null); }
+  };
+  const applyHall = async (t: any) => {
+    if (!confirm(`把「${t.name}」的参数应用到同厅所有牌桌？`)) return;
+    try { const r = await admin.applyHall(t.id, t.hallId); await load(); alert(`已更新 ${r.updated} 张牌桌`); } catch (e: any) { onError(e.message); }
+  };
+
+  return (
+    <div className="table-settings">
+      <div className="muted small" style={{ padding: '8px 16px' }}>修改后点「保存」立即写入，下一局开始生效（正在进行的倒计时不打断）。发牌间隔含飞牌动画，建议 1500–3000 毫秒。</div>
+      {data.halls.map((h) => (
+        <div key={h.id} className="ts-hall">
+          <div className="panel-title">{h.name} <span className="muted small">{h.kind === 'vip' ? '真人荷官' : 'RNG 自动'}</span></div>
+          <div className="table-wrap">
+            <table className="tbl">
+              <thead><tr><th>牌桌</th><th>状态</th><th>在线</th>{FIELDS.map((f) => <th key={f.k}>{f.label}<span className="muted small">（{f.unit}）</span></th>)}<th></th></tr></thead>
+              <tbody>
+                {data.items.filter((t) => t.hallId === h.id).map((t) => (
+                  <tr key={t.id} className={dirty(t) ? 'dirty' : ''}>
+                    <td><b>{t.name}</b><div className="muted small">{t.id}</div></td>
+                    <td><span className={`phase ${t.phase}`}>{t.phase}</span> <span className="muted small">第 {t.roundNo} 局</span></td>
+                    <td>{t.online}</td>
+                    {FIELDS.map((f) => (
+                      <td key={f.k}>
+                        <input type="number" step={f.step ?? 1} value={val(t, f.k)} className="ts-input"
+                          onChange={(e) => setDraft((d) => ({ ...d, [t.id]: { ...d[t.id], [f.k]: e.target.value } }))} />
+                      </td>
+                    ))}
+                    <td className="ts-actions">
+                      <button className="primary" disabled={!dirty(t) || saving === t.id} onClick={() => save(t)}>{saving === t.id ? '保存中…' : '保存'}</button>
+                      <button className="ghost" onClick={() => applyHall(t)} title="把这张桌的参数复制到同厅其他桌">应用到全厅</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }

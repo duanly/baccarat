@@ -82,7 +82,7 @@ export function seedDefaultLayout(m: TableManager, opts: { mediaBase: string; rn
       id: `rng-${i}`, name: `快速桌 ${i}`, kind: 'rng', hallId: lobby.id,
       minBet: [10, 50, 200][tier], maxBet: [5000, 20000, 100000][tier], maxSideBet: [500, 2000, 10000][tier],
       payouts: i % 4 === 0 ? NO_COMMISSION_PAYOUTS : DEFAULT_PAYOUTS,
-      bettingSeconds: 12,
+      bettingSeconds: 15,
     });
   }
   const dealers = ['Alice', 'Bella', 'Cindy', 'Diana', 'Elsa', 'Fiona', 'Grace', 'Hanna', 'Iris', 'Jade', 'Kira', 'Luna', 'Mia', 'Nora', 'Olivia'];

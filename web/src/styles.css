@@ -698,3 +698,14 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 .table-page.landscape .chips { gap: 4px; }
 .table-page.landscape .chip { flex: 0 1 38px; min-width: 26px; }
 .table-page.landscape .allin-badge { top: 2px; right: 3px; font-size: 8px; padding: 0 4px; letter-spacing: 0; }
+/* 横屏：派彩阶段不再显示"派彩 / X赢 / 输赢"（结算画面已展示过） */
+.table-page.landscape .phase-box.corner { display: none; }
+
+/* ---------- 后台：牌桌设置 ---------- */
+.table-settings { padding: 0 16px 24px; }
+.ts-hall { margin-top: 14px; }
+.ts-input { width: 92px; padding: 4px 6px; font-size: 13px; text-align: right; }
+.ts-actions { white-space: nowrap; display: flex; gap: 6px; }
+.ts-actions button { padding: 4px 10px; font-size: 12px; }
+tr.dirty td { background: rgba(212,175,55,.08); }
+.table-settings .phase { text-transform: none; }
