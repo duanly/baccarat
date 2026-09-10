@@ -18,7 +18,7 @@ const desc = (p: PayoutTable): Record<BetType, string> => ({
   small: '押本局总发牌张数只有 4 张（双方都不补牌）。',
 });
 
-const ORDER: BetType[] = ['player', 'banker', 'tie', 'playerPair', 'bankerPair', 'anyPair', 'perfectPair', 'lucky6', 'lucky7', 'big', 'small'];
+const ORDER: BetType[] = ['player', 'banker', 'tie', 'playerPair', 'bankerPair', 'anyPair', 'lucky6', 'big', 'small'];   // 完美对子 / 幸运 7 已下架
 
 export function BetHelp({ payouts, onClose }: { payouts: PayoutTable; onClose: () => void }) {
   useEffect(() => {

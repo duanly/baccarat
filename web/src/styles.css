@@ -132,7 +132,7 @@ a.ghost { color: var(--muted); text-decoration: none; padding: 6px 10px; }
 .bet-area { padding: 0 12px 12px; display: grid; grid-template-columns: 1fr 260px; gap: 12px; }
 @media (max-width: 900px) { .bet-area { grid-template-columns: 1fr; } }
 .bet-grid { display: grid; gap: 6px; }
-.side-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.side-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .main-row { display: grid; grid-template-columns: 1.3fr 1fr 1.3fr; gap: 6px; }
 .spot { position: relative; border-radius: 10px; padding: 10px 6px; display: grid; gap: 2px; place-items: center; border: 2px solid var(--line); background: var(--panel); min-height: 58px; }
 .spot.main-spot { min-height: 84px; }
@@ -691,9 +691,6 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 
 /* ---------- 横屏：赔率不上板；筹码与金额左右排列；重复/清除固定、确认加宽 ---------- */
 .table-page .spot-odds, .table-page.landscape .spot-odds { display: none; }
-.table-page.landscape .mine-wrap { right: auto; left: 50%; top: 50%; transform: translate(-100%, -50%); margin-left: -4px; }
-.table-page.landscape .spot-amount { bottom: auto; top: 50%; transform: translateY(-50%); right: auto; left: 50%; margin-left: 6px; font-size: 11px; padding: 1px 6px; }
-.table-page.landscape .spot.main-spot .mine-wrap { margin-left: -6px; }
 .table-page.landscape .others-wrap { left: 3px; bottom: 2px; }
 .table-page.landscape .actions { display: flex; gap: 6px; flex: 0 0 auto; }
 .table-page.landscape .actions button { flex: 0 0 auto; width: 50px; min-width: 0; padding: 0; font-size: 12px; height: 30px; }
@@ -769,3 +766,32 @@ tr.dirty td { background: rgba(212,175,55,.08); }
 .table-page.landscape .settle-foot { flex-direction: row; min-width: 0; }
 .table-page.landscape .hands { top: 0; bottom: 0; align-items: end; padding-bottom: 12%; }
 .table-page.landscape .hands .phase-box { left: auto; right: 8px; top: 8px; transform: none; }
+
+/* ---------- 横屏二次调整：牌桌加宽到 55%，下注区文字缩小，筹码/金额恢复上下排列，结算画面同竖屏 ---------- */
+.table-page.landscape { grid-template-columns: minmax(0, 55fr) minmax(0, 45fr); }
+.table-page.landscape .scene { container-type: inline-size; }
+.table-page.landscape .spot-name { font-size: min(20cqw, 46cqh); letter-spacing: .08em; }
+.table-page.landscape .spot.main-spot .spot-name { font-size: min(26cqw, 50cqh); letter-spacing: .15em; }
+.table-page.landscape .mine-wrap { right: 8px; left: auto; top: 50%; transform: translateY(-55%); margin: 0; }
+.table-page.landscape .spot-amount { top: auto; bottom: 3px; right: 4px; left: auto; transform: none; margin: 0; font-size: 11px; padding: 1px 6px; }
+.table-page.landscape .others-wrap { left: 4px; bottom: 3px; }
+.table-page.landscape .allin-badge { top: 3px; right: 4px; font-size: 9px; padding: 0 5px; }
+/* 结算画面：与竖屏同一套（纵向排列；六张牌按牌桌宽度自适应，绝不飘出） */
+.table-page.landscape .settle-overlay { flex-direction: column; gap: 6px; padding: 4px; }
+.table-page.landscape .settle-title { font-size: 18px; letter-spacing: 4px; padding: 0 14px; line-height: 28px; }
+.table-page.landscape .settle-hands { gap: 8px; width: 100%; justify-content: center; }
+.table-page.landscape .settle-hand { padding: 4px 4px; gap: 2px; min-width: 0; }
+.table-page.landscape .settle-hand-title { display: block; font-size: 12px; }
+.table-page.landscape .settle-cards { gap: 3px; }
+.table-page.landscape .settle-cards .card.big { --sw: min(calc(var(--card-w) * 1.05), calc((100cqw - 110px) / 6)); width: var(--sw); height: calc(var(--sw) * 1.4); }
+.table-page.landscape .settle-total { font-size: 20px; line-height: 1; }
+.table-page.landscape .settle-vs { font-size: 13px; }
+.table-page.landscape .settle-foot { flex-direction: row; gap: 8px; min-width: 0; margin-top: 2px; }
+.table-page.landscape .settle-net { font-size: 18px; }
+.table-page.landscape .settle-tag { font-size: 11px; padding: 1px 8px; line-height: 16px; }
+
+/* ---------- 投注格内元素定位（横竖屏统一）：自己的筹码正中；金额贴底居中；他人注码左下角 ---------- */
+.table-page .mine-wrap, .table-page.landscape .mine-wrap { left: 50%; top: 50%; right: auto; bottom: auto; transform: translate(-50%, -50%); margin: 0; }
+.table-page .spot-amount, .table-page.landscape .spot-amount { left: 50%; right: auto; top: auto; bottom: 3px; transform: translateX(-50%); margin: 0; white-space: nowrap; }
+.table-page .others-wrap, .table-page.landscape .others-wrap { left: 4px; bottom: 3px; right: auto; top: auto; }
+.table-page .allin-badge { top: 3px; right: 4px; }

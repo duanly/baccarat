@@ -19,7 +19,8 @@ import { useOrientation, useWide } from '../lib/useOrientation';
 
 const CHIPS = [10, 50, 100, 500, 1000, 5000];
 const MAIN: BetType[] = ['player', 'tie', 'banker'];
-const SIDE: BetType[] = ['playerPair', 'anyPair', 'perfectPair', 'bankerPair', 'lucky6', 'lucky7', 'big', 'small'];
+// 边注：完美对子、幸运 7 已下架（服务端同样拒收）
+const SIDE: BetType[] = ['playerPair', 'anyPair', 'bankerPair', 'lucky6', 'big', 'small'];
 
 export function TablePage() {
   const { id = '' } = useParams();
@@ -323,13 +324,13 @@ export function TablePage() {
         {help && <BetHelp payouts={table.payouts} onClose={() => setHelp(false)} />}
         <div className="bet-grid">
           <div className="side-row">
-            {SIDE.slice(0, 4).map((t) => <BetSpot key={t} t={t} table={table} confirmed={confirmed[t]} pending={pending[t]} others={others[t]} allIn={pendingAllIn || myAllIn} onClick={() => addChip(t)} disabled={!betting} />)}
+            {SIDE.slice(0, 3).map((t) => <BetSpot key={t} t={t} table={table} confirmed={confirmed[t]} pending={pending[t]} others={others[t]} allIn={pendingAllIn || myAllIn} onClick={() => addChip(t)} disabled={!betting} />)}
           </div>
           <div className="main-row">
             {MAIN.map((t) => <BetSpot key={t} t={t} table={table} confirmed={confirmed[t]} pending={pending[t]} others={others[t]} allIn={pendingAllIn || myAllIn} onClick={() => addChip(t)} disabled={!betting} big />)}
           </div>
           <div className="side-row">
-            {SIDE.slice(4).map((t) => <BetSpot key={t} t={t} table={table} confirmed={confirmed[t]} pending={pending[t]} others={others[t]} allIn={pendingAllIn || myAllIn} onClick={() => addChip(t)} disabled={!betting} />)}
+            {SIDE.slice(3).map((t) => <BetSpot key={t} t={t} table={table} confirmed={confirmed[t]} pending={pending[t]} others={others[t]} allIn={pendingAllIn || myAllIn} onClick={() => addChip(t)} disabled={!betting} />)}
           </div>
         </div>
         <div className="chips">

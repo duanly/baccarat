@@ -12,6 +12,9 @@ import { randomUUID } from 'node:crypto';
 import type { BetType, Card, HandResult, TableKind, TablePhase } from './types.js';
 import { BET_TYPES } from './types.js';
 
+/** 已下架的玩法（前端不显示，服务端拒收） */
+const DISABLED_BETS = new Set<string>(['perfectPair', 'lucky7']);
+
 const BET_NAMES: Record<string, string> = {
   player: '闲', banker: '庄', tie: '和', playerPair: '闲对', bankerPair: '庄对', anyPair: '任意对子',
   perfectPair: '完美对子', lucky6: '幸运6', lucky7: '幸运7', big: '大', small: '小',
@@ -347,6 +350,7 @@ export class BaccaratTable extends EventEmitter {
     const merged: Bets = { ...cur };
     for (const [t, raw] of Object.entries(add) as [BetType, number][]) {
       if (!BET_TYPES.includes(t)) throw new Error(`未知投注区 ${t}`);
+      if (DISABLED_BETS.has(t)) throw new Error(`「${BET_NAMES[t] ?? t}」暂未开放`);
       if (!(raw > 0) || !Number.isFinite(raw)) throw new Error('投注金额无效');
       let v = raw;
       if (v > remaining) { v = round2(remaining); allIn = true; }   // 剩多少压多少
