@@ -80,8 +80,11 @@ cp deploy/.env.example deploy/.env && vi deploy/.env     # JWT_SECRET / DEALER_A
 ./deploy/deploy.sh                                       # 构建镜像并启动 caddy + baccarat + srs
 ```
 
-Caddy 自动申请证书；`/api`、`/ws`、H5 静态由游戏服务端提供，`/rtc/*`（WHEP/WHIP）与 `/live/*`（HLS）转给 SRS，
-全部走同一个域名的 HTTPS，App 壳里不再需要任何 http 放行。以后更新：`git pull && ./deploy/deploy.sh`。
+`deploy/.env` 里 `FRONT=caddy` 时由自带的 Caddy 占 80/443 并自动申请证书；如果这台机器的 80/443 已经被别的项目占用，
+设 `FRONT=external`：不起 Caddy，游戏服务端只监听 `127.0.0.1:18080`、SRS 信令 `127.0.0.1:11985`，
+把 `deploy/nginx-baccarat.conf` 加进已有的 Nginx（或把 `deploy/Caddyfile.external-snippet` 追加进已有的 Caddyfile），
+`certbot --nginx -d baccarat.yytbank.cn` 申请证书即可。两种方式下 `/api`、`/ws`、H5 都由游戏服务端提供，
+`/rtc/*`（WHEP/WHIP）与 `/live/*`（HLS）转给 SRS，全部走同一域名的 HTTPS。以后更新：`git pull && ./deploy/deploy.sh`。
 数据库在 docker volume `baccarat_data`（备份：`docker compose ... cp baccarat:/data/baccarat.db ./backup.db`）。
 
 同一台服务器部署第二个 App 的服务端：在 `deploy/docker-compose.prod.yml` 里加一个 service，`deploy/Caddyfile` 里加一个站点块

@@ -3,9 +3,14 @@
 #
 # Caddy 做反向代理并自动申请 Let's Encrypt 证书（80/443 必须对外开放，域名先解析到本机）。
 # 同一台机器再部署第二个 App 的服务端：在 Caddyfile 里加一段站点块指到它的容器/端口即可（见 Caddyfile 注释）。
+# 两种前置方式（二选一）：
+#   A. 这台机器 80/443 空闲：用本文件自带的 Caddy（docker compose --profile caddy ...，deploy.sh 默认 FRONT=caddy）
+#   B. 80/443 已被别的项目的 Nginx/Caddy 占用：不起 Caddy，游戏服务端映射到本机 18080、SRS API 映射到 11985，
+#      由已有的反向代理转发（见 deploy/nginx-baccarat.conf），deploy.sh 用 FRONT=external
 services:
   caddy:
     image: caddy:2
+    profiles: ["caddy"]
     restart: unless-stopped
     ports: ["80:80", "443:443", "443:443/udp"]
     volumes:
@@ -26,7 +31,8 @@ services:
       MEDIA_BASE: https://baccarat.yytbank.cn
     volumes:
       - baccarat_data:/data
-    expose: ["8080"]
+    ports:
+      - "127.0.0.1:18080:8080"   # 仅本机可访问，由反向代理转发
 
   srs:
     image: ossrs/srs:5
@@ -39,7 +45,9 @@ services:
     volumes:
       - ./srs.conf:/usr/local/srs/conf/docker.conf:ro
     command: ["./objs/srs", "-c", "conf/docker.conf"]
-    expose: ["1985", "8080"]
+    ports:
+      - "127.0.0.1:11985:1985"   # WHEP/WHIP 信令
+      - "127.0.0.1:18081:8080"   # HLS
 
   # ---- 第二个 App 的服务端示例（按需打开）----
   # other-app:
