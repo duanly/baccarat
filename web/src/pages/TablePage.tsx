@@ -81,7 +81,7 @@ export function TablePage() {
           }));
           break;
         case 'table:result':
-          setTable((t) => t && ({ ...t, lastResult: m.result, roadmap: m.roadmap, phase: 'settling' }));
+          setTable((t) => t && ({ ...t, lastResult: m.result, roadmap: m.roadmap, phase: 'settling', nextRoundAt: m.nextRoundAt ?? null }));
           // 咪牌：开奖后 3 秒未翻开的牌自动翻开
           setTimeout(() => setRevealed(new Set(['player0', 'player1', 'player2', 'banker0', 'banker1', 'banker2'])), 3000);
           break;
@@ -128,7 +128,7 @@ export function TablePage() {
     if (!betting) return;
     if (available <= 0) { flash(total(pending) > 0 ? '已梭哈：筹码全部压上' : '余额不足'); native.vibrate(); return; }
     const add = Math.min(chip, available);   // 不够一枚筹码 → 剩多少压多少（梭哈）
-    if (add < chip) flash(`余额不足一枚筹码，已压上剩余 ¥${add.toLocaleString()}（梭哈）`);
+    if (add < chip) flash(`余额不足一枚筹码，已压上剩余 $${add.toLocaleString()}（梭哈）`);
     // 筹码从筹码栏飞到投注区，落地后再计入待确认注码
     const from = centerOf(document.querySelector('.chips .chip.sel'));
     const spot = document.querySelector(`.spot.${t}`);
@@ -278,7 +278,7 @@ export function TablePage() {
         <div className="brand">{table.name} <span className="muted small">#{table.shoeId} 第 {table.roundNo} 局</span></div>
         <div className="userbar">
           <span>{user?.nickname}</span>
-          <span className="balance">¥ {user?.balance.toLocaleString()}</span>
+          <span className="balance">$ {user?.balance.toLocaleString()}</span>
           <button className="ghost rotate" title="切换横竖屏" onClick={() => setOrientation(landscape ? 'portrait' : 'landscape')}>{landscape ? '竖屏' : '横屏'}</button>
         </div>
       </header>
@@ -290,7 +290,7 @@ export function TablePage() {
             : <DealerScene flights={flights} onLanded={onLanded} shoeId={table.shoeId} />}
 
           {overlay && r && <SettleOverlay result={r} myNet={lastSettle} onClick={() => setOverlay(false)} />}
-          <PhaseBanner phase={table.phase} secs={secs} roundId={table.roundId} />
+          <PhaseBanner phase={table.phase} secs={secs} roundId={table.roundId} nextRoundAt={table.nextRoundAt ?? null} />
           <div className="hands">
             <Hand side="player" cards={table.playerCards} total={table.playerTotal} win={showResult ? r!.outcome === 'player' : false}
               landed={table.kind === 'rng' ? landed.player : undefined} squeeze={table.kind === 'live'} revealed={revealed} onReveal={reveal} />
@@ -331,14 +331,14 @@ export function TablePage() {
             <button onClick={rebet} disabled={!betting || !lastBets} className="ghost">重复</button>
             <button onClick={clearAll} disabled={!betting || total(shown) === 0} className="ghost">清除</button>
             <button onClick={submit} disabled={!betting || total(pending) === 0} className={`primary confirm ${total(pending) > 0 ? 'pulse' : ''} ${pendingAllIn ? 'allin' : ''}`}>
-              {pendingAllIn ? `梭哈 ALL IN ¥${total(pending).toLocaleString()}` : `确认 ¥${total(pending).toLocaleString()}`}
+              {pendingAllIn ? `梭哈 ALL IN $${total(pending).toLocaleString()}` : `确认 $${total(pending).toLocaleString()}`}
             </button>
           </div>
           <div className={`bet-hint ${total(pending) > 0 ? 'active' : ''}`}>
             {total(pending) > 0
-              ? <>已选 <b>¥{total(pending).toLocaleString()}</b>，点「{pendingAllIn ? '梭哈' : '确认'}」才算下注 · 剩 {secs}s</>
+              ? <>已选 <b>${total(pending).toLocaleString()}</b>，点「{pendingAllIn ? '梭哈' : '确认'}」才算下注 · 剩 {secs}s</>
               : betting
-                ? <>选筹码后点击投注区，再按确认 · 可用 ¥{available.toLocaleString()}{available > 0 && <button className="link" onClick={allInNow}>梭哈</button>}</>
+                ? <>选筹码后点击投注区，再按确认 · 可用 ${available.toLocaleString()}{available > 0 && <button className="link" onClick={allInNow}>梭哈</button>}</>
                 : <span className="muted">限红 {table.limits.minBet} – {table.limits.maxBet.toLocaleString()} · 边注上限 {table.limits.maxSideBet.toLocaleString()}</span>}
           </div>
         </div>
@@ -362,7 +362,7 @@ function BetSpot({ t, table, confirmed, pending, others, allIn, onClick, disable
       <span className="spot-name">{BET_LABELS[t]}</span>
       <span className="spot-odds">{payoutLabel(t, table.payouts)}</span>
       {others && others.amount > 0 && (
-        <span className="others-wrap" title={`${others.players} 位玩家共 ¥${others.amount.toLocaleString()}`}>
+        <span className="others-wrap" title={`${others.players} 位玩家共 $${others.amount.toLocaleString()}`}>
           <ChipStack amount={others.amount} others size={big ? 16 : 13} />
           <span className="others-count">{others.players}人</span>
         </span>

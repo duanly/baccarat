@@ -41,7 +41,7 @@ export function LobbyPage() {
         <div className="userbar">
           <span>{user?.nickname}</span>
           <span className="vip">VIP{user?.vipLevel}</span>
-          <span className="balance">¥ {user?.balance.toLocaleString()}</span>
+          <span className="balance">$ {user?.balance.toLocaleString()}</span>
           {user?.role === 'admin' && <Link to="/admin" className="ghost">管理后台</Link>}
           <button onClick={deposit} className="ghost">充值(演示)</button>
           <button onClick={logout} className="ghost">退出</button>

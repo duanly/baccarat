@@ -39,7 +39,7 @@ export interface PayoutTable {
 
 export interface TableSnapshot {
   id: string; name: string; kind: 'rng' | 'live'; hallId: string; phase: TablePhase;
-  roundId: string | null; roundNo: number; shoeId: string | null; countdownEndsAt: number | null;
+  roundId: string | null; roundNo: number; shoeId: string | null; countdownEndsAt: number | null; nextRoundAt?: number | null;
   playerCards: Card[]; bankerCards: Card[]; playerTotal: number; bankerTotal: number;
   lastResult: HandResult | null; roadmap: Roadmap;
   limits: { minBet: number; maxBet: number; maxSideBet: number }; payouts: PayoutTable;
@@ -49,7 +49,7 @@ export interface TableSnapshot {
 
 export interface TableSummary {
   id: string; name: string; kind: 'rng' | 'live'; hallId: string; phase: TablePhase; roundNo: number;
-  countdownEndsAt: number | null; limits: { minBet: number; maxBet: number }; dealerName?: string; playersOnline: number;
+  countdownEndsAt: number | null; nextRoundAt?: number | null; limits: { minBet: number; maxBet: number }; dealerName?: string; playersOnline: number;
   stats: Roadmap['stats']; recent: RoundSummary[]; bigRoad: BigRoadCell[][];
 }
 

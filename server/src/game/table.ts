@@ -63,6 +63,8 @@ export interface TableSnapshot {
   roundNo: number;
   shoeId: string | null;
   countdownEndsAt: number | null;
+  /** RNG 桌：下一局开始投注的时间（结算阶段用来做开局倒计时） */
+  nextRoundAt: number | null;
   playerCards: Card[];
   bankerCards: Card[];
   playerTotal: number;
@@ -103,6 +105,7 @@ export class BaccaratTable extends EventEmitter {
   roundId: string | null = null;
   roundNo = 0;
   countdownEndsAt: number | null = null;
+  nextRoundAt: number | null = null;
   private shoe: Shoe | null = null;
   private liveShoeId: string | null = null;
   private hand = new Hand();
@@ -185,6 +188,7 @@ export class BaccaratTable extends EventEmitter {
     this.bets.clear();
     this.allIns.clear();
     this.countdownEndsAt = Date.now() + this.cfg.bettingSeconds * 1000;
+    this.nextRoundAt = null;
     this.setPhase('betting');
     this.emitBets();
     this.schedule(this.cfg.bettingSeconds * 1000, () => this.closeBetting());
@@ -247,7 +251,7 @@ export class BaccaratTable extends EventEmitter {
     this.hand = new Hand();
     if (this.timer) clearTimeout(this.timer);
     this.setPhase(this.cfg.kind === 'rng' ? 'settling' : 'idle');
-    if (this.cfg.kind === 'rng') this.schedule(this.cfg.resultPauseSeconds * 1000, () => this.afterRound());
+    if (this.cfg.kind === 'rng') { this.nextRoundAt = Date.now() + this.cfg.resultPauseSeconds * 1000; this.schedule(this.cfg.resultPauseSeconds * 1000, () => this.afterRound()); }
   }
 
   private emitCard(side: 'player' | 'banker', card: Card) {
@@ -280,8 +284,9 @@ export class BaccaratTable extends EventEmitter {
       this.lastNets.set(userId, net);
       this.emit('settled', { tableId: this.cfg.id, roundId: this.roundId!, userId, settlements, balance });
     }
+    this.nextRoundAt = this.cfg.kind === 'rng' ? Date.now() + this.cfg.resultPauseSeconds * 1000 : null;
     this.setPhase('settling');
-    this.emit('result', { tableId: this.cfg.id, roundId: this.roundId!, result, roadmap: this.roadmap });
+    this.emit('result', { tableId: this.cfg.id, roundId: this.roundId!, result, roadmap: this.roadmap, nextRoundAt: this.nextRoundAt });
     this.emitBets();
     this.schedule(this.cfg.resultPauseSeconds * 1000, () => this.afterRound());
   }
@@ -418,7 +423,7 @@ export class BaccaratTable extends EventEmitter {
       roundId: this.roundId,
       roundNo: this.roundNo,
       shoeId: this.shoeId,
-      countdownEndsAt: this.countdownEndsAt,
+      countdownEndsAt: this.countdownEndsAt, nextRoundAt: this.nextRoundAt,
       playerCards: this.hand.playerCards,
       bankerCards: this.hand.bankerCards,
       playerTotal: this.handTotalOf(this.hand.playerCards),
@@ -440,7 +445,7 @@ export class BaccaratTable extends EventEmitter {
     const s = this.roadmap.stats;
     return {
       id: this.cfg.id, name: this.cfg.name, kind: this.cfg.kind, hallId: this.cfg.hallId,
-      phase: this.phase, roundNo: this.roundNo, countdownEndsAt: this.countdownEndsAt,
+      phase: this.phase, roundNo: this.roundNo, countdownEndsAt: this.countdownEndsAt, nextRoundAt: this.nextRoundAt,
       limits: { minBet: this.cfg.minBet, maxBet: this.cfg.maxBet },
       dealerName: this.cfg.dealerName, playersOnline: this.online.size,
       stats: s, recent: this.history.slice(-30), bigRoad: this.roadmap.bigRoad.slice(-12),

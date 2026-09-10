@@ -563,3 +563,72 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
   .table-page .userbar { gap: 6px; font-size: 13px; flex-shrink: 0; }
   .table-page .userbar button.rotate { padding: 4px 8px; font-size: 12px; }
 }
+
+/* ---------- 投注区文字改为水印式：大字半透明居中，赔率贴底 ---------- */
+.table-page .spot { container-type: size; overflow: hidden; }
+.table-page .spot-name, .table-page.landscape .spot-name, .table-page .spot.main-spot .spot-name, .table-page.landscape .spot.main-spot .spot-name {
+  position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+  font-size: min(26cqw, 58cqh); letter-spacing: .12em; font-weight: 900;
+  color: rgba(255,255,255,.22); text-shadow: 0 1px 0 rgba(0,0,0,.35); transition: color .25s;
+}
+.table-page .spot.main-spot .spot-name, .table-page.landscape .spot.main-spot .spot-name { font-size: min(34cqw, 62cqh); letter-spacing: .2em; color: rgba(255,255,255,.26); }
+.table-page .spot.player .spot-name, .table-page .spot.playerPair .spot-name { color: rgba(120,170,255,.32); }
+.table-page .spot.banker .spot-name, .table-page .spot.bankerPair .spot-name, .table-page .spot.lucky6 .spot-name, .table-page .spot.lucky7 .spot-name { color: rgba(255,120,120,.32); }
+.table-page .spot.tie .spot-name { color: rgba(110,220,150,.32); }
+.table-page .spot.hit .spot-name { color: rgba(255,255,255,.75); }
+.table-page .spot-odds, .table-page.landscape .spot-odds { position: absolute; left: 0; right: 0; bottom: 3px; text-align: center; font-size: 10px; color: rgba(255,255,255,.55); pointer-events: none; }
+.table-page .spot .mine-wrap, .table-page .spot .others-wrap, .table-page .spot .spot-amount { position: relative; z-index: 1; }
+
+/* ---------- 竖屏：顶栏高度含刘海安全区，三块整体再压缩一点，确认键不再出屏 ---------- */
+.table-page.portrait { --top: calc(52px + env(safe-area-inset-top)); }
+.table-page.portrait .scene { height: calc((var(--vh) - var(--top)) * .31); }
+.table-page.portrait .bet-area { height: calc((var(--vh) - var(--top)) * .655); padding-top: 4px; gap: 4px; }
+.table-page.portrait .bet-grid { gap: 4px; grid-template-rows: 1fr 1.5fr 1fr; }
+.table-page.portrait .chips { grid-template-rows: auto auto; gap: 2px 6px; padding-bottom: 2px; }
+.table-page.portrait .chip { max-height: 6vh; }
+.table-page.portrait .bet-hint { display: none; }
+.table-page.portrait .actions button { padding: 4px 8px; }
+
+/* ---------- 横屏结算画面：标题不再顶出画面 ---------- */
+.table-page.landscape .settle-overlay { padding: 2px 4px; justify-content: center; gap: 0; overflow: hidden; }
+.table-page.landscape .settle-title { font-size: 13px; letter-spacing: 2px; padding: 0 10px; line-height: 20px; margin: 0; }
+.table-page.landscape .settle-hand-title { font-size: 10px; }
+.table-page.landscape .settle-total { font-size: 14px; line-height: 16px; }
+.table-page.landscape .settle-net { font-size: 12px; line-height: 16px; }
+.table-page.landscape .settle-hand-title { display: none; }
+.table-page.landscape .settle-hand { padding: 0 6px; gap: 1px; }
+.table-page.landscape .settle-cards .card.big { width: calc(var(--card-w) * .9); height: calc(var(--card-h) * .9); }
+.table-page.landscape .settle-foot { gap: 6px; margin-top: 1px; }
+.table-page.landscape .settle-tag { font-size: 10px; padding: 0 6px; line-height: 14px; }
+/* 横屏：结算画面改为横排——左边胜方标题，中间牌，右边标签/输赢，高度只由牌决定 */
+.table-page.landscape .settle-overlay { flex-direction: row; gap: 10px; align-items: center; }
+.table-page.landscape .settle-title { flex: none; writing-mode: horizontal-tb; font-size: 15px; line-height: 26px; padding: 0 10px; }
+.table-page.landscape .settle-foot { flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; margin: 0; min-width: 64px; }
+.table-page.landscape .settle-net { font-size: 15px; }
+
+/* ---------- 派彩阶段：开局前 3 秒绿色倒计时（挂在牌桌右上角，不挡结算画面） ---------- */
+.countdown.pre { left: auto; right: 8px; top: 8px; transform: none; width: clamp(40px, 9vh, 60px); height: clamp(40px, 9vh, 60px); animation: cdPulseTR 1s ease-out; }
+.countdown.pre .cd-arc { stroke: var(--green); }
+.countdown.pre .cd-num { color: #7ee2a0; font-size: clamp(18px, 4.5vh, 30px); }
+.countdown.pre .cd-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 2px; white-space: nowrap; font-size: 10px; color: #7ee2a0; letter-spacing: 1px; }
+@keyframes cdPulseTR { 0% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.table-page.landscape .countdown.pre { width: 36px; height: 36px; top: 4px; right: 4px; }
+.table-page.landscape .countdown.pre .cd-num { font-size: 16px; }
+.table-page.landscape .countdown.pre .cd-label { display: none; }
+
+/* ---------- 筹码：横竖屏同一尺寸；选中的抬高 + 金色亮边 ---------- */
+.table-page .chips, .table-page.landscape .chips { display: flex; align-items: flex-end; gap: 6px; padding: 6px 2px 2px; overflow: visible; }
+.table-page.portrait .chips { flex-wrap: wrap; justify-content: space-between; align-content: center; }
+.table-page.portrait .actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 6px; margin-top: 4px; }
+.table-page .chip, .table-page.landscape .chip, .table-page.portrait .chip {
+  flex: 0 0 auto; width: 38px; height: 38px; max-height: none; margin: 0; font-size: 11px; border-width: 2px;
+  transition: transform .18s cubic-bezier(.2,.8,.3,1.4), box-shadow .18s, outline-color .18s; outline: 2px solid transparent; outline-offset: 1px;
+}
+.table-page .chip.sel, .table-page.landscape .chip.sel {
+  transform: translateY(-7px) scale(1.06); outline-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(212,175,55,.35), 0 8px 14px rgba(0,0,0,.55), 0 0 14px rgba(212,175,55,.55);
+}
+@media (max-width: 360px) { .table-page .chip, .table-page.portrait .chip { width: 34px; height: 34px; font-size: 10px; } }
+@media (min-width: 900px) and (min-height: 561px) { .table-page.wide .chip { width: 52px; height: 52px; font-size: 14px; border-width: 3px; } }
+.table-page.landscape .chips { align-items: center; padding-top: 8px; }
+.table-page.landscape .actions { align-self: center; }
