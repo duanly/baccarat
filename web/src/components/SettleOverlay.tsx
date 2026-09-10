@@ -4,7 +4,7 @@
 import type { Card, HandResult } from '../lib/protocol';
 import { CardFace } from './CardFace';
 
-export function SettleOverlay({ result, myNet, onClick }: { result: HandResult; myNet: number | null; onClick?: () => void }) {
+export function SettleOverlay({ result, myNet, onClick, out }: { result: HandResult; myNet: number | null; onClick?: () => void; out?: boolean }) {
   const r = result;
   const label = r.outcome === 'banker' ? '庄 赢' : r.outcome === 'player' ? '闲 赢' : '和 局';
   const tags: string[] = [];
@@ -14,7 +14,7 @@ export function SettleOverlay({ result, myNet, onClick }: { result: HandResult; 
   if (r.outcome === 'banker' && r.bankerTotal === 7) tags.push('幸运7');
   if (r.playerTotal >= 8 && r.playerCardCount === 2 || r.bankerTotal >= 8 && r.bankerCardCount === 2) tags.push('天牌');
   return (
-    <div className="settle-overlay" onClick={onClick}>
+    <div className={`settle-overlay ${out ? 'out' : ''}`} onClick={onClick}>
       <div className={`settle-title ${r.outcome}`}>{label}</div>
       <div className="settle-hands">
         <BigHand side="player" cards={r.playerCards} total={r.playerTotal} win={r.outcome === 'player'} tie={r.outcome === 'tie'} />

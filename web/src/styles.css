@@ -822,3 +822,11 @@ tr.dirty td { background: rgba(212,175,55,.08); }
 /* 竖屏：牌位置保持原来靠下，只把点数挪到水印上方 */
 .table-page.portrait .hands { grid-template-rows: 1fr; align-items: end; padding-bottom: 6%; }
 .table-page.portrait .hand.player { grid-area: 1 / 1; } .table-page.portrait .hand.banker { grid-area: 1 / 2; }
+
+/* ---------- 横屏：牌桌页自身是滚动容器，禁止顶部下拉回弹（竖屏由壳的 bounces=false 处理，这里一并兜底） ---------- */
+html, body { overscroll-behavior: none; }
+.table-page.landscape { overscroll-behavior: none; overscroll-behavior-y: none; }
+
+/* 结算画面淡出 */
+.settle-overlay.out { animation: settleOut .4s ease-in forwards; pointer-events: none; }
+@keyframes settleOut { from { opacity: 1; } to { opacity: 0; } }

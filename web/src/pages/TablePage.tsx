@@ -33,6 +33,7 @@ export function TablePage() {
   const [lastSettle, setLastSettle] = useState<number | null>(null);
   const [mySettlements, setMySettlements] = useState<any[] | null>(null);
   const [overlay, setOverlay] = useState(false);       // 结算画面
+  const [overlayOut, setOverlayOut] = useState(false); // 结算画面淡出中
   const [help, setHelp] = useState(false);             // 玩法说明浮窗
   const [cleared, setCleared] = useState(false);       // 结算画面结束后清空桌面上一局的牌
   const [paidOut, setPaidOut] = useState(false);       // 派彩动画已完成 → 隐藏桌上筹码
@@ -212,9 +213,10 @@ export function TablePage() {
   useEffect(() => {
     if (!showResult || payoutDone.current) return;
     payoutDone.current = true;
-    setOverlay(true);
-    const t1 = setTimeout(() => { setOverlay(false); setCleared(true); runPayout(); }, 2800);
-    return () => clearTimeout(t1);
+    setOverlay(true); setOverlayOut(false);
+    const t0 = setTimeout(() => setOverlayOut(true), 2400);                                          // 2.4s 后开始淡出
+    const t1 = setTimeout(() => { setOverlay(false); setOverlayOut(false); setCleared(true); runPayout(); }, 2800);  // 淡出 0.4s 结束
+    return () => { clearTimeout(t0); clearTimeout(t1); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showResult]);
 
@@ -293,7 +295,7 @@ export function TablePage() {
             ? <LiveVideo whepUrl={table.stream?.whepUrl} dealerName={table.dealerName} />
             : <DealerScene flights={flights} onLanded={onLanded} shoeId={table.shoeId} />}
 
-          {overlay && r && <SettleOverlay result={r} myNet={lastSettle} onClick={() => setOverlay(false)} />}
+          {overlay && r && <SettleOverlay result={r} myNet={lastSettle} out={overlayOut} onClick={() => setOverlayOut(true)} />}
           <PhaseBanner phase={table.phase} secs={secs} roundId={table.roundId} nextRoundAt={table.nextRoundAt ?? null} countdownEndsAt={table.countdownEndsAt} />
           <div className="hands">
             <Hand side="player" cards={cleared ? [] : table.playerCards} total={cleared ? 0 : table.playerTotal} win={showResult && !cleared ? r!.outcome === 'player' : false}
