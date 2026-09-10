@@ -149,8 +149,7 @@ a.ghost { color: var(--muted); text-decoration: none; padding: 6px 10px; }
 .chips { grid-template-columns: repeat(3, 1fr); }
 .chip { aspect-ratio: 1; border-radius: 50%; font-weight: 800; border: 4px dashed rgba(255,255,255,.7); color: #fff; }
 .chip.sel { outline: 3px solid var(--gold); outline-offset: 2px; }
-.chip.c10 { background: #5b7fa8; } .chip.c50 { background: #3f8f4f; } .chip.c100 { background: #8c2f2f; }
-.chip.c500 { background: #6b3fa0; } .chip.c1000 { background: #c58a1a; } .chip.c5000 { background: #2b2b2b; }
+/* 筹码颜色：按面额固定（所有桌子一致），见 lib/chips.ts */
 .actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 6px; }
 .chips .muted { grid-column: 1 / -1; }
 
@@ -240,8 +239,7 @@ input { -webkit-user-select: text; user-select: text; }
 .others-count { font-size: 9px; color: var(--muted); }
 .stack { position: relative; display: inline-block; }
 .chip-mini { position: absolute; left: 0; border-radius: 50%; border: 2px dashed rgba(255,255,255,.75); box-shadow: 0 1px 2px rgba(0,0,0,.5); color: #fff; font-weight: 800; display: grid; place-items: center; line-height: 1; box-sizing: border-box; }
-.chip-mini.c10 { background: #5b7fa8; } .chip-mini.c50 { background: #3f8f4f; } .chip-mini.c100 { background: #8c2f2f; }
-.chip-mini.c500 { background: #6b3fa0; } .chip-mini.c1000 { background: #c58a1a; } .chip-mini.c5000 { background: #2b2b2b; }
+
 .stack.ghost { opacity: .5; animation: breathe 1.2s ease-in-out infinite; }
 .stack.ghost .chip-mini { border-style: dotted; border-color: #fff; filter: saturate(.5); }
 .stack.others { opacity: .85; }
@@ -834,4 +832,23 @@ html, body { overscroll-behavior: none; }
 /* ---------- 限红水印：牌桌左上角（横竖屏一致）；顶栏只显示"第 N 局"，窄屏也显示 ---------- */
 .limit-mark { position: absolute; top: 8px; left: 10px; z-index: 6; pointer-events: none; font-size: 11px; line-height: 1.35; letter-spacing: .5px; color: rgba(255,255,255,.38); text-shadow: 0 1px 0 rgba(0,0,0,.4); }
 .table-page.landscape .limit-mark { font-size: 10px; top: 6px; left: 8px; }
-.brand .small.round-no { display: inline; }
+
+/* ---------- 筹码面额配色（1-2-5 阶梯全覆盖，同一面额所有桌子同色） ---------- */
+.chip.c1, .chip-mini.c1 { background: #7a7a7a; }
+.chip.c2, .chip-mini.c2 { background: #8a9a5b; }
+.chip.c5, .chip-mini.c5 { background: #b56a3c; }
+.chip.c10, .chip-mini.c10 { background: #5b7fa8; }
+.chip.c20, .chip-mini.c20 { background: #3c9db5; }
+.chip.c50, .chip-mini.c50 { background: #3f8f4f; }
+.chip.c100, .chip-mini.c100 { background: #8c2f2f; }
+.chip.c200, .chip-mini.c200 { background: #c9612a; }
+.chip.c500, .chip-mini.c500 { background: #6b3fa0; }
+.chip.c1000, .chip-mini.c1000 { background: #c58a1a; }
+.chip.c2000, .chip-mini.c2000 { background: #1f8a7a; }
+.chip.c5000, .chip-mini.c5000 { background: #2b2b2b; }
+.chip.c10000, .chip-mini.c10000 { background: #5a1e4a; }
+.chip.c20000, .chip-mini.c20000 { background: #b8336a; }
+.chip.c50000, .chip-mini.c50000 { background: #9a9a9a; color: #111; border-color: rgba(0,0,0,.55); }
+.chip.c100000, .chip-mini.c100000 { background: #d4af37; color: #1a1400; border-color: rgba(0,0,0,.45); }
+.chip.c200000, .chip-mini.c200000 { background: #e0e0e0; color: #111; border-color: rgba(0,0,0,.55); }
+.chip.c500000, .chip-mini.c500000 { background: #101010; border-color: var(--gold); }

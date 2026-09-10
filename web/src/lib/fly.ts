@@ -1,3 +1,4 @@
+import { chipLabel, splitAmount } from './chips';
 /**
  * 通用飞行动画：把一个临时元素从 A 点飞到 B 点（筹码 / 牌 都用它）。
  * 元素挂在 body 上、fixed 定位，用 Web Animations API 做位移 + 缩放 + 旋转，结束后自动移除。
@@ -41,21 +42,15 @@ export function fly(node: HTMLElement, from: Point, to: Point, opts: FlyOptions 
   });
 }
 
+
 /** 造一枚筹码 DOM（与投注面板上的筹码同款式） */
 export function makeChipNode(value: number, size = 34): HTMLElement {
   const el = document.createElement('div');
   el.className = `chip-mini fly-chip c${value}`;
   el.style.width = `${size}px`; el.style.height = `${size}px`; el.style.fontSize = `${size * 0.36}px`;
-  el.textContent = value >= 1000 ? `${value / 1000}K` : String(value);
+  el.textContent = chipLabel(value);
   return el;
 }
 
 /** 金额拆成几枚代表性筹码（最多 n 枚），用于"别人下注"飞入 */
-export function representativeChips(amount: number, n = 3): number[] {
-  const out: number[] = [];
-  let rest = amount;
-  for (const v of [5000, 1000, 500, 100, 50, 10]) {
-    while (rest >= v && out.length < n) { out.push(v); rest -= v; }
-  }
-  return out.length ? out : [10];
-}
+export const representativeChips = (amount: number, n = 3): number[] => splitAmount(amount, n);

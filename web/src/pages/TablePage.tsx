@@ -16,8 +16,8 @@ import { fly, centerOf, makeChipNode, representativeChips } from '../lib/fly';
 import { native } from '../lib/native';
 import { useCountdown, PHASE_LABEL } from '../lib/useCountdown';
 import { useOrientation, useWide } from '../lib/useOrientation';
+import { chipSetFor, setChipSet, chipLabel } from '../lib/chips';
 
-const CHIPS = [10, 50, 100, 500, 1000, 5000];
 const MAIN: BetType[] = ['player', 'tie', 'banker'];
 // 边注：完美对子、幸运 7 已下架（服务端同样拒收）
 const SIDE: BetType[] = ['playerPair', 'anyPair', 'bankerPair', 'lucky6', 'big', 'small'];
@@ -29,6 +29,9 @@ export function TablePage() {
   const [confirmed, setConfirmed] = useState<Bets>({});   // 服务端已接受的本局注码
   const [pending, setPending] = useState<Bets>({});       // 本地待提交
   const [chip, setChip] = useState(100);
+  // 本桌筹码面额：随限红变化；进桌 / 限红改动时默认选中第二小的一枚
+  const CHIPS = useMemo(() => chipSetFor(table?.limits.minBet ?? 10, table?.limits.maxBet ?? 5000), [table?.limits.minBet, table?.limits.maxBet]);
+  useEffect(() => { setChipSet(CHIPS); if (!CHIPS.includes(chip)) setChip(CHIPS[Math.min(1, CHIPS.length - 1)]); /* eslint-disable-line react-hooks/exhaustive-deps */ }, [CHIPS]);
   const [toast, setToast] = useState<string>('');
   const [lastSettle, setLastSettle] = useState<number | null>(null);
   const [mySettlements, setMySettlements] = useState<any[] | null>(null);
@@ -281,7 +284,7 @@ export function TablePage() {
     <div className={`table-page ${table.kind} ${orientation} ${wide ? 'wide' : ''} ${paidOut ? 'paid-out' : ''}`}>
       <header className="topbar">
         <Link to="/" className="ghost">‹ 返回大厅</Link>
-        <div className="brand">{table.name} <span className="muted small round-no">第 {table.roundNo} 局</span></div>
+        <div className="brand">{table.name}</div>
         <div className="userbar">
           <span>{user?.nickname}</span>
           <span className="balance">$ {user?.balance.toLocaleString()}</span>
@@ -296,7 +299,7 @@ export function TablePage() {
             : <DealerScene flights={flights} onLanded={onLanded} shoeId={table.shoeId} />}
 
           {overlay && r && <SettleOverlay result={r} myNet={lastSettle} out={overlayOut} onClick={() => setOverlayOut(true)} />}
-          <div className="limit-mark">限红 ${table.limits.minBet.toLocaleString()} – ${table.limits.maxBet.toLocaleString()}<br />边注 ${table.limits.maxSideBet.toLocaleString()}</div>
+          <div className="limit-mark">限红 ${table.limits.minBet.toLocaleString()} – ${table.limits.maxBet.toLocaleString()}<br />边注 ${table.limits.maxSideBet.toLocaleString()}<br />第 {table.roundNo} 局</div>
           <PhaseBanner phase={table.phase} secs={secs} roundId={table.roundId} nextRoundAt={table.nextRoundAt ?? null} countdownEndsAt={table.countdownEndsAt} />
           <div className="hands">
             <Hand side="player" cards={cleared ? [] : table.playerCards} total={cleared ? 0 : table.playerTotal} win={showResult && !cleared ? r!.outcome === 'player' : false}
@@ -337,7 +340,7 @@ export function TablePage() {
           </div>
         </div>
         <div className="chips">
-          {CHIPS.map((c) => <button key={c} className={`chip c${c} ${chip === c ? 'sel' : ''}`} onClick={() => setChip(c)}>{c >= 1000 ? `${c / 1000}K` : c}</button>)}
+          {CHIPS.map((c) => <button key={c} className={`chip c${c} ${chip === c ? 'sel' : ''}`} onClick={() => setChip(c)}>{chipLabel(c)}</button>)}
           <div className="actions">
             <button onClick={rebet} disabled={!betting || !lastBets} className="ghost">重复</button>
             <button onClick={clearAll} disabled={!betting || total(shown) === 0} className="ghost">清除</button>
