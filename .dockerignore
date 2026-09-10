@@ -1,0 +1,13 @@
+node_modules
+*/node_modules
+web/dist
+server/dist
+server/data
+*.db
+*.db-*
+.git
+mobile
+ios
+deploy
+*.md
+.DS_Store

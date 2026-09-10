@@ -1,0 +1,25 @@
+{
+  "name": "@baccarat/server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node --no-warnings dist/index.js",
+    "build": "tsc -p tsconfig.json",
+    "test": "tsx --test --no-warnings test/*.test.ts",
+    "seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

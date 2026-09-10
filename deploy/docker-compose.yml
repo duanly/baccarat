@@ -1,0 +1,26 @@
+# 本地一键起：媒体服务器（SRS，支持 WHIP 推流 / WHEP 拉流 / HLS 兜底）
+#
+#   docker compose -f deploy/docker-compose.yml up -d
+#
+# 荷官端推流（OBS 30+ 选 WHIP 服务，或 ffmpeg/gstreamer）：
+#   WHIP: http://<host>:1985/rtc/v1/whip/?app=live&stream=vip1-t1
+# 浏览器拉流由前端 LiveVideo 组件自动完成：
+#   WHEP: http://<host>:1985/rtc/v1/whep/?app=live&stream=vip1-t1
+#
+# 生产建议：SRS/mediamtx 集群 + TURN（coturn），或直接使用云厂商 WebRTC 直播（阿里云 RTS、腾讯云快直播、Cloudflare Stream WHIP/WHEP）。
+services:
+  srs:
+    image: ossrs/srs:5
+    container_name: baccarat-srs
+    restart: unless-stopped
+    ports:
+      - "1935:1935"     # RTMP（OBS 传统推流兜底）
+      - "1985:1985"     # HTTP API：WHIP / WHEP
+      - "8081:8080"     # HLS / 播放器页
+      - "8000:8000/udp" # WebRTC 媒体
+    environment:
+      # 对外可达的 IP，浏览器 WebRTC 需要（局域网填内网 IP，公网填公网 IP）
+      CANDIDATE: ${CANDIDATE:-127.0.0.1}
+    volumes:
+      - ./srs.conf:/usr/local/srs/conf/docker.conf:ro
+    command: ["./objs/srs", "-c", "conf/docker.conf"]

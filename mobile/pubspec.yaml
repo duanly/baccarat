@@ -1,0 +1,32 @@
+name: baccarat_app
+description: Baccarat mobile shell - native iOS/Android app loading the H5 game in a WebView.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # WebView（支持 WebRTC / 权限 / JS 桥 / 自定义 UA）
+  flutter_inappwebview: ^6.1.5
+  # 登录 token 存 Keychain / Keystore，H5 通过桥读写
+  flutter_secure_storage: ^9.2.2
+  # 牌桌页面保持常亮
+  wakelock_plus: ^1.2.8
+  # 外链（客服、下载页）
+  url_launcher: ^6.3.1
+  package_info_plus: ^8.1.0
+  device_info_plus: ^11.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

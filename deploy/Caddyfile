@@ -1,0 +1,22 @@
+# 自动 HTTPS；WebSocket 无需额外配置，Caddy 原生透传
+baccarat.yytbank.cn {
+    encode gzip
+    # WebRTC WHEP/WHIP 信令 → SRS HTTP API
+    handle /rtc/* {
+        reverse_proxy srs:1985
+    }
+    # HLS 兜底 → SRS HTTP 服务器
+    handle /live/* {
+        reverse_proxy srs:8080
+    }
+    # 其余（H5 静态、/api、/ws）→ 游戏服务端
+    handle {
+        reverse_proxy baccarat:8080
+    }
+}
+
+# 同一台服务器上的第二个 App：另起一个域名（或同域名不同路径），指到它的容器/端口
+# other.yytbank.cn {
+#     reverse_proxy other-app:3000
+# }
+# 若第二个 App 跑在宿主机而不是容器里：reverse_proxy host.docker.internal:3000

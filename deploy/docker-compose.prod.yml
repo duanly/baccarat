@@ -1,0 +1,53 @@
+# 生产部署：baccarat.yytbank.cn
+#   docker compose -f deploy/docker-compose.prod.yml up -d --build
+#
+# Caddy 做反向代理并自动申请 Let's Encrypt 证书（80/443 必须对外开放，域名先解析到本机）。
+# 同一台机器再部署第二个 App 的服务端：在 Caddyfile 里加一段站点块指到它的容器/端口即可（见 Caddyfile 注释）。
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  baccarat:
+    build: ..
+    restart: unless-stopped
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?请在 deploy/.env 里设置 JWT_SECRET}
+      DEALER_API_KEY: ${DEALER_API_KEY:?请在 deploy/.env 里设置 DEALER_API_KEY}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASS: ${ADMIN_PASS:?请在 deploy/.env 里设置 ADMIN_PASS}
+      SIGNUP_BONUS: ${SIGNUP_BONUS:-0}
+      # 浏览器通过同域名的 /rtc 拉流（Caddy 转给 SRS），避免混合内容与跨域
+      MEDIA_BASE: https://baccarat.yytbank.cn
+    volumes:
+      - baccarat_data:/data
+    expose: ["8080"]
+
+  srs:
+    image: ossrs/srs:5
+    restart: unless-stopped
+    ports:
+      - "1935:1935"      # 荷官 OBS RTMP 推流
+      - "8000:8000/udp"  # WebRTC 媒体（必须开放 UDP）
+    environment:
+      CANDIDATE: ${PUBLIC_IP:?请在 deploy/.env 里设置 PUBLIC_IP（服务器公网 IP）}
+    volumes:
+      - ./srs.conf:/usr/local/srs/conf/docker.conf:ro
+    command: ["./objs/srs", "-c", "conf/docker.conf"]
+    expose: ["1985", "8080"]
+
+  # ---- 第二个 App 的服务端示例（按需打开）----
+  # other-app:
+  #   image: your/other-app:latest
+  #   restart: unless-stopped
+  #   expose: ["3000"]
+
+volumes:
+  caddy_data:
+  caddy_config:
+  baccarat_data:
