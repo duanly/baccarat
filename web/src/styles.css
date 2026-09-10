@@ -512,7 +512,7 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 /* ---------- 阶段提示：开始投注 / 停止下注 横幅，最后 5 秒倒计时 ---------- */
 .phase-banner { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); z-index: 9; text-align: center; padding: 8px 0; color: #fff; pointer-events: none; animation: bannerIn 1.4s cubic-bezier(.2,.8,.3,1) forwards; }
 .phase-banner.open { background: linear-gradient(90deg, transparent, rgba(42,157,79,.92) 25%, rgba(42,157,79,.92) 75%, transparent); }
-.phase-banner.close { background: linear-gradient(90deg, transparent, rgba(214,40,40,.92) 25%, rgba(214,40,40,.92) 75%, transparent); animation-duration: 1.2s; }
+.phase-banner.close { background: linear-gradient(90deg, transparent, rgba(214,40,40,.92) 25%, rgba(214,40,40,.92) 75%, transparent); }
 .pb-main { font-size: clamp(20px, 4vh, 30px); font-weight: 900; letter-spacing: 6px; }
 .pb-sub { font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 3px; opacity: .85; }
 @keyframes bannerIn { 0% { opacity: 0; transform: translateY(-50%) scaleX(.2); } 18% { opacity: 1; transform: translateY(-50%) scaleX(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
@@ -606,15 +606,17 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 .table-page.landscape .settle-foot { flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; margin: 0; min-width: 64px; }
 .table-page.landscape .settle-net { font-size: 15px; }
 
-/* ---------- 派彩阶段：开局前 3 秒绿色倒计时（挂在牌桌右上角，不挡结算画面） ---------- */
-.countdown.pre { left: auto; right: 8px; top: 8px; transform: none; width: clamp(40px, 9vh, 60px); height: clamp(40px, 9vh, 60px); animation: cdPulseTR 1s ease-out; }
+/* ---------- 派彩阶段：开局前 3 秒绿色倒计时（居中，与封盘倒计时同款）；阶段/胜方/输赢挪到右上角 ---------- */
 .countdown.pre .cd-arc { stroke: var(--green); }
-.countdown.pre .cd-num { color: #7ee2a0; font-size: clamp(18px, 4.5vh, 30px); }
-.countdown.pre .cd-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 2px; white-space: nowrap; font-size: 10px; color: #7ee2a0; letter-spacing: 1px; }
-@keyframes cdPulseTR { 0% { transform: scale(1.3); } 100% { transform: scale(1); } }
-.table-page.landscape .countdown.pre { width: 36px; height: 36px; top: 4px; right: 4px; }
-.table-page.landscape .countdown.pre .cd-num { font-size: 16px; }
+.countdown.pre .cd-num { color: #7ee2a0; }
+.countdown.pre .cd-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 2px; white-space: nowrap; font-size: 11px; color: #7ee2a0; letter-spacing: 2px; }
 .table-page.landscape .countdown.pre .cd-label { display: none; }
+.table-page .phase-box.corner { position: absolute; top: 6px; right: 6px; z-index: 7; display: flex; flex-direction: row; align-items: center; gap: 6px; min-width: 0; }
+.table-page .phase-box.corner .phase { font-size: 11px; padding: 2px 8px; }
+.table-page .phase-box.corner .outcome { font-size: 14px; padding: 2px 10px; }
+.table-page .phase-box.corner .settle { font-size: 14px; }
+.table-page.landscape .phase-box.corner { top: 4px; right: 4px; gap: 4px; }
+.table-page.landscape .phase-box.corner .outcome { font-size: 12px; padding: 1px 8px; }
 
 /* ---------- 筹码：横竖屏同一尺寸；选中的抬高 + 金色亮边 ---------- */
 .table-page .chips, .table-page.landscape .chips { display: flex; align-items: flex-end; gap: 6px; padding: 6px 2px 2px; overflow: visible; }
@@ -632,3 +634,54 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 @media (min-width: 900px) and (min-height: 561px) { .table-page.wide .chip { width: 52px; height: 52px; font-size: 14px; border-width: 3px; } }
 .table-page.landscape .chips { align-items: center; padding-top: 8px; }
 .table-page.landscape .actions { align-self: center; }
+
+/* ---------- 横屏：筹码行整体限制在左列内，确认键绝不越到右栏 ---------- */
+.table-page.landscape .chips { overflow: hidden; flex-wrap: nowrap; min-width: 0; max-width: 100%; }
+.table-page.landscape .chip { flex: 0 1 38px; min-width: 28px; }
+.table-page.landscape .actions { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.table-page.landscape .actions button { width: auto; flex: 1 1 52px; min-width: 0; padding: 0 4px; white-space: nowrap; }
+.table-page.landscape .actions button.confirm { width: auto; flex: 1.6 1 80px; }
+.table-page .hands .phase-box.corner { grid-column: auto; grid-row: auto; }
+.table-page .hands .phase-box.placeholder { visibility: hidden; }
+/* 横屏牌桌太矮，右上角会压到"庄 BANKER"标题：改放中间列底部，倒计时环上移 */
+.table-page.landscape .phase-box.corner { top: auto; right: auto; bottom: 3px; left: 50%; transform: translateX(-50%); }
+.table-page.landscape .phase-box.corner .phase { display: none; }
+.table-page.landscape .countdown.pre { top: 42%; }
+
+/* ---------- 玩法说明：投注区右上角 ? 按钮 + 浮窗 ---------- */
+.table-page .bet-area { position: relative; }
+.help-btn { position: absolute; top: 2px; right: 4px; z-index: 5; width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 1.5px solid rgba(212,175,55,.8); background: rgba(0,0,0,.55); color: var(--gold); font-weight: 900; font-size: 13px; line-height: 1; display: grid; place-items: center; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.help-btn:hover { background: rgba(212,175,55,.25); }
+.table-page.portrait .help-btn { top: 0; right: 4px; }
+.help-mask { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 12px; animation: fadeIn .2s; backdrop-filter: blur(2px); }
+.help-dialog { width: min(560px, 100%); max-height: calc(100% - env(safe-area-inset-top) - env(safe-area-inset-bottom)); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--gold); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.6); overflow: hidden; animation: pop .25s; }
+.help-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 15px; }
+.help-head .small { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.help-close { width: 28px; height: 28px; padding: 0; border-radius: 50%; font-size: 18px; line-height: 1; }
+.help-list { overflow-y: auto; padding: 6px 12px 12px; -webkit-overflow-scrolling: touch; }
+.help-row { display: grid; grid-template-columns: 112px 1fr; gap: 10px; align-items: start; padding: 7px 0; border-bottom: 1px dashed rgba(255,255,255,.08); }
+.help-name { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
+.help-tag { font-weight: 800; font-size: 13px; padding: 2px 8px; border-radius: 6px; background: var(--panel-2); color: #fff; }
+.help-tag.player, .help-tag.playerPair { background: #1f3a6b; } .help-tag.banker, .help-tag.bankerPair, .help-tag.lucky6, .help-tag.lucky7 { background: #6b1f1f; } .help-tag.tie { background: #1f5a33; }
+.help-odds { font-size: 11px; color: var(--gold); }
+.help-desc { font-size: 13px; line-height: 1.5; color: #d9d9d9; }
+.help-note { padding-top: 10px; line-height: 1.6; }
+@media (max-width: 480px) { .help-row { grid-template-columns: 92px 1fr; gap: 6px; } .help-desc { font-size: 12px; } }
+.table-page.landscape .help-dialog { max-height: 100%; } .table-page.landscape .help-row { padding: 4px 0; }
+
+/* ---------- 投注区状态：投注中全部点亮；封盘/发牌/派彩时压暗、无点击反馈 ---------- */
+.table-page .spot { transition: filter .35s, background .35s, border-color .35s, box-shadow .35s; }
+.table-page .bet-area.open .spot { filter: none; border-color: rgba(255,255,255,.28); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 2px 6px rgba(0,0,0,.35); }
+.table-page .bet-area.open .spot.player, .table-page .bet-area.open .spot.playerPair { background: #1a3460; border-color: rgba(120,170,255,.55); }
+.table-page .bet-area.open .spot.banker, .table-page .bet-area.open .spot.bankerPair, .table-page .bet-area.open .spot.lucky6, .table-page .bet-area.open .spot.lucky7 { background: #5a1f1f; border-color: rgba(255,120,120,.55); }
+.table-page .bet-area.open .spot.tie { background: #1c5230; border-color: rgba(110,220,150,.55); }
+.table-page .bet-area.open .spot.anyPair, .table-page .bet-area.open .spot.perfectPair, .table-page .bet-area.open .spot.big, .table-page .bet-area.open .spot.small { background: #1f3a2a; border-color: rgba(212,175,55,.45); }
+.table-page .bet-area.open .spot-name { color: rgba(255,255,255,.55); }
+.table-page .bet-area.open .spot.player .spot-name, .table-page .bet-area.open .spot.playerPair .spot-name { color: rgba(150,190,255,.7); }
+.table-page .bet-area.open .spot.banker .spot-name, .table-page .bet-area.open .spot.bankerPair .spot-name, .table-page .bet-area.open .spot.lucky6 .spot-name, .table-page .bet-area.open .spot.lucky7 .spot-name { color: rgba(255,150,150,.7); }
+.table-page .bet-area.open .spot.tie .spot-name { color: rgba(140,235,175,.7); }
+.table-page .bet-area.open .spot-odds { color: rgba(255,255,255,.8); }
+.table-page .bet-area.open .spot:active { filter: brightness(1.25); transform: scale(.985); }
+.table-page .bet-area.open .spot.has-pending { border-color: var(--gold); box-shadow: 0 0 12px rgba(212,175,55,.45); }
+.table-page .bet-area.closed .spot { filter: brightness(.7) saturate(.8); pointer-events: none; }
+.table-page .bet-area.closed .spot.hit { filter: none; }

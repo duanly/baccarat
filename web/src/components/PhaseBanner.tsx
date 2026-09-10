@@ -27,7 +27,7 @@ export function PhaseBanner({ phase, secs, roundId, nextRoundAt }: { phase: Tabl
     // 从投注切到发牌：停止下注横幅
     if (lastPhase.current === 'betting' && phase === 'dealing') {
       setBanner('close');
-      const t = setTimeout(() => setBanner(null), 1200);
+      const t = setTimeout(() => setBanner(null), 1400);
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

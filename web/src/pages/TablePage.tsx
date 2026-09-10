@@ -11,6 +11,7 @@ import { SqueezeCard } from '../components/SqueezeCard';
 import { CardFace } from '../components/CardFace';
 import { SettleOverlay } from '../components/SettleOverlay';
 import { PhaseBanner } from '../components/PhaseBanner';
+import { BetHelp } from '../components/BetHelp';
 import { fly, centerOf, makeChipNode, representativeChips } from '../lib/fly';
 import { native } from '../lib/native';
 import { useCountdown, PHASE_LABEL } from '../lib/useCountdown';
@@ -31,6 +32,7 @@ export function TablePage() {
   const [lastSettle, setLastSettle] = useState<number | null>(null);
   const [mySettlements, setMySettlements] = useState<any[] | null>(null);
   const [overlay, setOverlay] = useState(false);       // 结算画面
+  const [help, setHelp] = useState(false);             // 玩法说明浮窗
   const [paidOut, setPaidOut] = useState(false);       // 派彩动画已完成 → 隐藏桌上筹码
   const payoutDone = useRef(false);
   const [myAllIn, setMyAllIn] = useState(false);
@@ -294,11 +296,13 @@ export function TablePage() {
           <div className="hands">
             <Hand side="player" cards={table.playerCards} total={table.playerTotal} win={showResult ? r!.outcome === 'player' : false}
               landed={table.kind === 'rng' ? landed.player : undefined} squeeze={table.kind === 'live'} revealed={revealed} onReveal={reveal} />
-            <div className="phase-box">
+            {/* 派彩阶段：阶段/胜方/输赢挪到牌桌右上角，中间留给开局倒计时（中间仍保留占位，庄闲位置不动） */}
+            <div className={`phase-box ${table.phase === 'settling' ? 'corner' : ''}`}>
               <div className={`phase ${table.phase}`} style={betting && secs <= 5 ? { visibility: 'hidden' } : undefined}>{betting ? `投注 ${secs}s` : PHASE_LABEL[table.phase]}</div>
               {showResult && <div className={`outcome ${r!.outcome}`}>{r!.outcome === 'banker' ? '庄赢' : r!.outcome === 'player' ? '闲赢' : '和局'}</div>}
               {lastSettle !== null && <div className={`settle ${lastSettle >= 0 ? 'win' : 'lose'}`}>{lastSettle >= 0 ? '+' : ''}{lastSettle.toLocaleString()}</div>}
             </div>
+            {table.phase === 'settling' && <div className="phase-box placeholder" aria-hidden />}
             <Hand side="banker" cards={table.bankerCards} total={table.bankerTotal} win={showResult ? r!.outcome === 'banker' : false}
               landed={table.kind === 'rng' ? landed.banker : undefined} squeeze={table.kind === 'live'} revealed={revealed} onReveal={reveal} />
           </div>
@@ -313,7 +317,9 @@ export function TablePage() {
         </aside>
       </div>
 
-      <div className="bet-area">
+      <div className={`bet-area ${betting ? 'open' : 'closed'}`}>
+        <button className="help-btn" title="玩法说明" onClick={() => setHelp(true)}>?</button>
+        {help && <BetHelp payouts={table.payouts} onClose={() => setHelp(false)} />}
         <div className="bet-grid">
           <div className="side-row">
             {SIDE.slice(0, 4).map((t) => <BetSpot key={t} t={t} table={table} confirmed={confirmed[t]} pending={pending[t]} others={others[t]} allIn={pendingAllIn || myAllIn} onClick={() => addChip(t)} disabled={!betting} />)}
