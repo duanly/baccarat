@@ -508,3 +508,58 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 
 /* 派彩完成后桌上的筹码收走 */
 .table-page.paid-out .mine-wrap, .table-page.paid-out .others-wrap, .table-page.paid-out .spot-amount { opacity: 0; transition: opacity .3s; }
+
+/* ---------- 阶段提示：开始投注 / 停止下注 横幅，最后 5 秒倒计时 ---------- */
+.phase-banner { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); z-index: 9; text-align: center; padding: 8px 0; color: #fff; pointer-events: none; animation: bannerIn 1.4s cubic-bezier(.2,.8,.3,1) forwards; }
+.phase-banner.open { background: linear-gradient(90deg, transparent, rgba(42,157,79,.92) 25%, rgba(42,157,79,.92) 75%, transparent); }
+.phase-banner.close { background: linear-gradient(90deg, transparent, rgba(214,40,40,.92) 25%, rgba(214,40,40,.92) 75%, transparent); animation-duration: 1.2s; }
+.pb-main { font-size: clamp(20px, 4vh, 30px); font-weight: 900; letter-spacing: 6px; }
+.pb-sub { font-size: clamp(10px, 1.6vh, 13px); letter-spacing: 3px; opacity: .85; }
+@keyframes bannerIn { 0% { opacity: 0; transform: translateY(-50%) scaleX(.2); } 18% { opacity: 1; transform: translateY(-50%) scaleX(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+.countdown { position: absolute; left: 50%; top: 50%; width: clamp(56px, 12vh, 90px); height: clamp(56px, 12vh, 90px); transform: translate(-50%, -50%); z-index: 9; pointer-events: none; animation: cdPulse 1s ease-out; }
+.cd-ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+.cd-track { fill: rgba(0,0,0,.45); stroke: rgba(255,255,255,.2); stroke-width: 6; }
+.cd-arc { fill: none; stroke: var(--gold); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 276; transition: stroke-dashoffset 1s linear; }
+.cd-num { position: absolute; inset: 0; display: grid; place-items: center; font-size: clamp(26px, 6vh, 44px); font-weight: 900; color: var(--gold); text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+@keyframes cdPulse { 0% { transform: translate(-50%, -50%) scale(1.35); } 100% { transform: translate(-50%, -50%) scale(1); } }
+.table-page.landscape .phase-banner { padding: 3px 0; }
+.table-page.landscape .pb-main { font-size: 18px; letter-spacing: 4px; }
+.table-page.landscape .pb-sub { font-size: 9px; }
+
+/* ---------- 手机横屏：三张牌放得下、筹码栏不越界 ---------- */
+.table-page.landscape { --card-w: 44px; --card-h: 62px; --side-w: 264px; }
+.table-page.landscape .hands { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 4px; }
+.table-page.landscape .hand { min-width: 0; padding: 0 2px; }
+.table-page.landscape .cards { gap: 3px; }
+.table-page.landscape .card.rot { transform: none; margin: 0; }
+.table-page.landscape .phase-box { min-width: 72px; }
+.table-page.landscape .phase-box .phase { font-size: 11px; padding: 2px 8px; }
+.table-page.landscape .chips { gap: 4px; padding: 0; overflow: hidden; }
+.table-page.landscape .chip { width: 30px; height: 30px; font-size: 9px; border-width: 2px; }
+.table-page.landscape .actions { gap: 6px; }
+.table-page.landscape .actions button { width: 56px; height: 30px; font-size: 12px; }
+.table-page.landscape .actions button.confirm { width: 88px; }
+.table-page.landscape .settle-cards .card.big { width: var(--card-w); height: var(--card-h); }
+.table-page.landscape .settle-hands { gap: 8px; }
+
+/* ---------- 手机竖屏：结算画面三张牌不超出 ---------- */
+@media (max-width: 640px) {
+  .settle-hands { gap: 8px; width: 100%; justify-content: center; }
+  .settle-hand { padding: 4px 4px; min-width: 0; }
+  .settle-cards { gap: 3px; }
+  /* 最坏情况庄闲各三张：牌宽按屏宽自适应，六张牌 + VS 一定放得下 */
+  .settle-cards .card.big {
+    --sw: min(calc(var(--card-w) * .92), calc((100vw - 96px) / 6));
+    width: var(--sw); height: calc(var(--sw) * 1.4);
+  }
+  .settle-vs { font-size: 12px; }
+  .settle-title { letter-spacing: 3px; }
+}
+
+/* ---------- 小屏顶栏（≤400px）：牌桌页不换行，标题可省略 ---------- */
+@media (max-width: 400px) {
+  .table-page .topbar { flex-wrap: nowrap; gap: 8px; padding-left: 10px; padding-right: 10px; }
+  .table-page .topbar .brand { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .table-page .userbar { gap: 6px; font-size: 13px; flex-shrink: 0; }
+  .table-page .userbar button.rotate { padding: 4px 8px; font-size: 12px; }
+}

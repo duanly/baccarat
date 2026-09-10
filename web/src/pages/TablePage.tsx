@@ -10,6 +10,7 @@ import { DealerScene, type Flight } from '../components/DealerScene';
 import { SqueezeCard } from '../components/SqueezeCard';
 import { CardFace } from '../components/CardFace';
 import { SettleOverlay } from '../components/SettleOverlay';
+import { PhaseBanner } from '../components/PhaseBanner';
 import { fly, centerOf, makeChipNode, representativeChips } from '../lib/fly';
 import { native } from '../lib/native';
 import { useCountdown, PHASE_LABEL } from '../lib/useCountdown';
@@ -289,11 +290,12 @@ export function TablePage() {
             : <DealerScene flights={flights} onLanded={onLanded} shoeId={table.shoeId} />}
 
           {overlay && r && <SettleOverlay result={r} myNet={lastSettle} onClick={() => setOverlay(false)} />}
+          <PhaseBanner phase={table.phase} secs={secs} roundId={table.roundId} />
           <div className="hands">
             <Hand side="player" cards={table.playerCards} total={table.playerTotal} win={showResult ? r!.outcome === 'player' : false}
               landed={table.kind === 'rng' ? landed.player : undefined} squeeze={table.kind === 'live'} revealed={revealed} onReveal={reveal} />
             <div className="phase-box">
-              <div className={`phase ${table.phase}`}>{betting ? `投注 ${secs}s` : PHASE_LABEL[table.phase]}</div>
+              <div className={`phase ${table.phase}`} style={betting && secs <= 5 ? { visibility: 'hidden' } : undefined}>{betting ? `投注 ${secs}s` : PHASE_LABEL[table.phase]}</div>
               {showResult && <div className={`outcome ${r!.outcome}`}>{r!.outcome === 'banker' ? '庄赢' : r!.outcome === 'player' ? '闲赢' : '和局'}</div>}
               {lastSettle !== null && <div className={`settle ${lastSettle >= 0 ? 'win' : 'lose'}`}>{lastSettle >= 0 ? '+' : ''}{lastSettle.toLocaleString()}</div>}
             </div>

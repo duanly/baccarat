@@ -1,7 +1,14 @@
 # 如果占用 80/443 的是另一个项目的 Caddy：把这段追加进它的 Caddyfile 后 reload 即可
+# （Caddyfile 语法要求 "{" 后必须换行，不能写成单行）
 baccarat.yytbank.cn {
-    encode gzip
-    handle /rtc/*  { reverse_proxy 127.0.0.1:11985 }
-    handle /live/* { reverse_proxy 127.0.0.1:18081 }
-    handle         { reverse_proxy 127.0.0.1:18080 }
+        encode gzip
+        handle /rtc/* {
+                reverse_proxy 127.0.0.1:11985
+        }
+        handle /live/* {
+                reverse_proxy 127.0.0.1:18081
+        }
+        handle {
+                reverse_proxy 127.0.0.1:18080
+        }
 }
