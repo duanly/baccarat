@@ -209,13 +209,13 @@ export function TablePage() {
   const allRevealed = !table || table.kind !== 'live' || [...table.playerCards.keys()].every((i) => revealed.has('player' + i)) && [...table.bankerCards.keys()].every((i) => revealed.has('banker' + i));
   const showResult = !!table && table.phase === 'settling' && !!r && allRevealed;
 
-  // 开奖（且咪牌桌全部翻开）→ 结算画面 2.8s → 清空桌面 + 派彩动画 + 开局 3 秒倒计时（服务端派彩停顿 6s）
+  // 开奖（且咪牌桌全部翻开）→ 结算画面 1.5s + 渐隐 1.3s → 清空桌面 + 派彩动画 + 开局 3 秒倒计时（服务端派彩停顿 6s）
   useEffect(() => {
     if (!showResult || payoutDone.current) return;
     payoutDone.current = true;
     setOverlay(true); setOverlayOut(false);
-    const t0 = setTimeout(() => setOverlayOut(true), 2400);                                          // 2.4s 后开始淡出
-    const t1 = setTimeout(() => { setOverlay(false); setOverlayOut(false); setCleared(true); runPayout(); }, 2800);  // 淡出 0.4s 结束
+    const t0 = setTimeout(() => setOverlayOut(true), 1500);                                          // 1.5s 后开始淡出
+    const t1 = setTimeout(() => { setOverlay(false); setOverlayOut(false); setCleared(true); runPayout(); }, 2800);  // 淡出 1.3s 结束
     return () => { clearTimeout(t0); clearTimeout(t1); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showResult]);
@@ -281,11 +281,11 @@ export function TablePage() {
     <div className={`table-page ${table.kind} ${orientation} ${wide ? 'wide' : ''} ${paidOut ? 'paid-out' : ''}`}>
       <header className="topbar">
         <Link to="/" className="ghost">‹ 返回大厅</Link>
-        <div className="brand">{table.name} <span className="muted small">#{table.shoeId} 第 {table.roundNo} 局</span></div>
+        <div className="brand">{table.name} <span className="muted small round-no">第 {table.roundNo} 局</span></div>
         <div className="userbar">
           <span>{user?.nickname}</span>
           <span className="balance">$ {user?.balance.toLocaleString()}</span>
-          <button className="ghost rotate" title="切换横竖屏" onClick={() => setOrientation(landscape ? 'portrait' : 'landscape')}>{landscape ? '竖屏' : '横屏'}</button>
+          <button className="ghost rotate" title="切换横竖屏" onClick={() => setOrientation(landscape ? 'portrait' : 'landscape')}>切屏</button>
         </div>
       </header>
 
@@ -296,6 +296,7 @@ export function TablePage() {
             : <DealerScene flights={flights} onLanded={onLanded} shoeId={table.shoeId} />}
 
           {overlay && r && <SettleOverlay result={r} myNet={lastSettle} out={overlayOut} onClick={() => setOverlayOut(true)} />}
+          <div className="limit-mark">限红 ${table.limits.minBet.toLocaleString()} – ${table.limits.maxBet.toLocaleString()}<br />边注 ${table.limits.maxSideBet.toLocaleString()}</div>
           <PhaseBanner phase={table.phase} secs={secs} roundId={table.roundId} nextRoundAt={table.nextRoundAt ?? null} countdownEndsAt={table.countdownEndsAt} />
           <div className="hands">
             <Hand side="player" cards={cleared ? [] : table.playerCards} total={cleared ? 0 : table.playerTotal} win={showResult && !cleared ? r!.outcome === 'player' : false}

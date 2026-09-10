@@ -179,7 +179,7 @@ input { -webkit-user-select: text; user-select: text; }
   .scene { min-height: 0; }
   .hands { padding: 8px; gap: 6px; grid-template-columns: 1fr 1fr; }
   .phase-box { grid-column: 1 / -1; grid-row: 1; display: flex; justify-content: center; gap: 8px; align-items: center; }
-  .brand .small { display: none; }
+  .brand .small { display: none; }  /* 窄屏顶栏放不下限红，靠投注区下方的提示行显示 */
   .card .rank { font-size: 15px; } .card .suit { font-size: 13px; }
   .card.rot { margin: 0 8px; }
   .hand-title { font-size: 12px; }
@@ -828,5 +828,10 @@ html, body { overscroll-behavior: none; }
 .table-page.landscape { overscroll-behavior: none; overscroll-behavior-y: none; }
 
 /* 结算画面淡出 */
-.settle-overlay.out { animation: settleOut .4s ease-in forwards; pointer-events: none; }
+.settle-overlay.out { animation: settleOut 1.3s ease-in-out forwards; pointer-events: none; }
 @keyframes settleOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* ---------- 限红水印：牌桌左上角（横竖屏一致）；顶栏只显示"第 N 局"，窄屏也显示 ---------- */
+.limit-mark { position: absolute; top: 8px; left: 10px; z-index: 6; pointer-events: none; font-size: 11px; line-height: 1.35; letter-spacing: .5px; color: rgba(255,255,255,.38); text-shadow: 0 1px 0 rgba(0,0,0,.4); }
+.table-page.landscape .limit-mark { font-size: 10px; top: 6px; left: 8px; }
+.brand .small.round-no { display: inline; }
