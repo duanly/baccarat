@@ -416,10 +416,10 @@ function Hand({ side, cards, total, win, landed, squeeze, revealed, onReveal }: 
   const unrevealed = squeeze ? cards.filter((_, i) => !revealed.has(side + i)).length : 0;
   return (
     <div className={`hand ${side} ${win ? 'win' : ''}`}>
-      <div className="hand-title">
-        {side === 'player' ? '闲 PLAYER' : '庄 BANKER'} <b>{showTotal ? total : ''}</b>
-        {unrevealed > 0 && <span className="squeeze-hint">咪牌 · 拖动牌角掀开</span>}
-      </div>
+      {/* 标题做成固定水印，点数是独立角标：牌数 / 结果变化时标题位置不动 */}
+      <div className="hand-title">{side === 'player' ? '闲 PLAYER' : '庄 BANKER'}</div>
+      <div className={`hand-total ${showTotal ? 'show' : ''}`}>{showTotal ? total : ''}</div>
+      {unrevealed > 0 && <span className="squeeze-hint">咪牌 · 拖动牌角掀开</span>}
       <div className="cards">
         {cards.map((c, i) => {
           if (landed !== undefined && i >= landed) return <div key={i} className="card-slot arriving" />;

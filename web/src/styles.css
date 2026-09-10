@@ -712,3 +712,60 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 .ts-actions button { padding: 4px 10px; font-size: 12px; }
 tr.dirty td { background: rgba(212,175,55,.08); }
 .table-settings .phase { text-transform: none; }
+
+/* ==================================================================
+   庄闲标题改为固定水印：牌区高度固定，牌 / 点数 / 结果变化时标题不动
+   ================================================================== */
+.hand { position: relative; padding: 0 6px; height: calc(var(--card-h) + 32px); box-sizing: border-box; }
+.hands { align-items: end; }
+.hand-title { position: absolute; top: 4px; left: 0; right: 0; margin: 0; text-align: center; pointer-events: none;
+  font-size: 13px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; opacity: .55; }
+.hand.player .hand-title { color: #8db4ff; } .hand.banker .hand-title { color: #ff8a8a; }
+.hand.win .hand-title { opacity: 1; }
+.hand-total { position: absolute; top: 0; right: 6px; min-width: 22px; height: 22px; line-height: 22px; padding: 0 6px; border-radius: 11px; text-align: center;
+  font-size: 15px; font-weight: 900; color: #1a1400; background: var(--gold); opacity: 0; transform: scale(.6); transition: opacity .2s, transform .25s cubic-bezier(.2,.8,.3,1.4); pointer-events: none; }
+.hand-total.show { opacity: 1; transform: scale(1); }
+.hand .cards { position: absolute; left: 0; right: 0; bottom: 4px; min-height: 0; }
+.squeeze-hint { position: absolute; top: 22px; left: 0; right: 0; text-align: center; }
+.table-page.landscape .hand-title { font-size: 11px; letter-spacing: 2px; top: 3px; }
+.table-page.landscape .hand { height: calc(var(--card-h) + 26px); }
+.table-page.landscape .hand-total { height: 18px; line-height: 18px; font-size: 12px; min-width: 18px; }
+
+/* ==================================================================
+   手机横屏新布局：左 = 牌桌（整屏高），右 = 下注区 + 筹码；牌路与玩家列表在下一屏，滚动查看
+   ================================================================== */
+.table-page.landscape { --top: 44px; --card-w: 52px; --card-h: 73px;
+  height: var(--vh); overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
+  display: grid; grid-template-columns: minmax(0, 46fr) minmax(0, 54fr); grid-template-rows: auto calc(var(--vh) - var(--top)) auto; column-gap: 8px; }
+.table-page.landscape .topbar { grid-column: 1 / -1; grid-row: 1; padding-top: 6px; padding-bottom: 6px; }
+.table-page.landscape .stage { display: contents; }
+.table-page.landscape .scene { grid-column: 1; grid-row: 2; margin: 6px 0; height: auto; min-height: 0; }
+.table-page.landscape .bet-area { grid-column: 2; grid-row: 2; padding: 6px 0; height: auto; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+.table-page.landscape .bet-grid { flex: 1 1 0; min-height: 0; grid-template-rows: 1fr 1.6fr 1fr; gap: 5px; }
+.table-page.landscape .spot { border-radius: 8px; }
+.table-page.landscape .spot-name { font-size: min(26cqw, 58cqh); } .table-page.landscape .spot.main-spot .spot-name { font-size: min(34cqw, 62cqh); }
+.table-page.landscape .chips { flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px; padding: 8px 2px 0; overflow: visible; max-width: none; }
+.table-page.landscape .chip { flex: 0 0 38px; width: 38px; height: 38px; min-width: 0; }
+.table-page.landscape .actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 6px; margin: 4px 0 0; flex: none; max-width: none; align-self: auto; }
+.table-page.landscape .actions button, .table-page.landscape .actions button.confirm { width: auto; flex: none; height: 32px; font-size: 13px; padding: 0 6px; }
+.table-page.landscape .help-btn { top: 2px; right: 2px; }
+.table-page.landscape .side { grid-column: 1 / -1; grid-row: 3; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin: 2px 0 calc(12px + env(safe-area-inset-bottom)); min-height: 0; }
+.table-page.landscape .players { max-height: 320px; min-height: 0; flex: none; }
+.table-page.landscape .roadmap, .table-page.landscape .roadmap.compact { margin: 0; }
+/* 牌桌区：庄闲两栏（去掉中间列），阶段标签浮在顶部，倒计时环居中 */
+.table-page.landscape .hands { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 4px 6px 6px; }
+.table-page.landscape .hands .phase-box, .table-page.landscape .hands .phase-box.placeholder { position: absolute; left: 50%; top: 6px; transform: translateX(-50%); grid-column: auto; min-width: 0; display: flex; }
+.table-page.landscape .hands .phase-box.placeholder { display: none; }
+.table-page.landscape .hands .phase-box .outcome, .table-page.landscape .hands .phase-box .settle { display: none; }
+.table-page.landscape .cards { gap: 4px; }
+.table-page.landscape .card.rot { transform: none; margin: 0; }
+.table-page.landscape .shoe { width: 52px; margin-left: -26px; top: 26px; }
+.table-page.landscape .countdown { width: 72px; height: 72px; }
+.table-page.landscape .countdown.pre { top: 50%; }
+.table-page.landscape .phase-banner { padding: 6px 0; }
+.table-page.landscape .settle-overlay { flex-direction: column; gap: 4px; }
+.table-page.landscape .settle-hand-title { display: block; }
+.table-page.landscape .settle-title { font-size: 15px; }
+.table-page.landscape .settle-foot { flex-direction: row; min-width: 0; }
+.table-page.landscape .hands { top: 0; bottom: 0; align-items: end; padding-bottom: 12%; }
+.table-page.landscape .hands .phase-box { left: auto; right: 8px; top: 8px; transform: none; }
