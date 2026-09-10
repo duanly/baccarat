@@ -701,8 +701,8 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 .table-page.landscape .chips { gap: 4px; }
 .table-page.landscape .chip { flex: 0 1 38px; min-width: 26px; }
 .table-page.landscape .allin-badge { top: 2px; right: 3px; font-size: 8px; padding: 0 4px; letter-spacing: 0; }
-/* 横屏：派彩阶段不再显示"派彩 / X赢 / 输赢"（结算画面已展示过） */
-.table-page.landscape .phase-box.corner { display: none; }
+/* 派彩阶段（横竖屏）不再显示"派彩 / X赢 / 输赢"角标（结算画面已展示过），只留中央倒计时 */
+.table-page .phase-box.corner { display: none; }
 
 /* ---------- 后台：牌桌设置 ---------- */
 .table-settings { padding: 0 16px 24px; }
