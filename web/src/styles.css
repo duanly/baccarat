@@ -648,7 +648,7 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 .table-page .hands .phase-box.placeholder { visibility: hidden; }
 /* 横屏牌桌太矮，右上角会压到"庄 BANKER"标题：改放中间列底部，倒计时环上移 */
 .table-page.landscape .phase-box.corner { top: auto; right: auto; bottom: 3px; left: 50%; transform: translateX(-50%); }
-.table-page.landscape .phase-box.corner .phase { display: none; }
+.table-page.landscape .phase-box.corner .phase { display: block; }
 .table-page.landscape .countdown.pre { top: 42%; }
 
 /* ---------- 玩法说明：投注区右上角 ? 按钮 + 浮窗 ---------- */
@@ -699,7 +699,7 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 .table-page.landscape .chip { flex: 0 1 38px; min-width: 26px; }
 .table-page.landscape .allin-badge { top: 2px; right: 3px; font-size: 8px; padding: 0 4px; letter-spacing: 0; }
 /* 派彩阶段（横竖屏）不再显示"派彩 / X赢 / 输赢"角标（结算画面已展示过），只留中央倒计时 */
-.table-page .phase-box.corner { display: none; }
+.table-page .phase-box.corner { display: flex; }
 
 /* ---------- 后台：牌桌设置 ---------- */
 .table-settings { padding: 0 16px 24px; }
@@ -803,3 +803,22 @@ tr.dirty td { background: rgba(212,175,55,.08); }
 .table-page .hands .phase-box .outcome, .table-page .hands .phase-box .settle { display: none; }
 .table-page.portrait .hands { padding-bottom: 6%; }
 .table-page .phase-box .phase { font-size: 12px; padding: 2px 9px; }
+/* 派彩阶段：标签同样固定在牌桌右上角（横竖屏一致），只显示"派彩"，胜方与输赢由结算画面展示 */
+.table-page .hands .phase-box.corner, .table-page.landscape .hands .phase-box.corner { display: flex; top: 8px; right: 8px; left: auto; bottom: auto; transform: none; }
+.table-page .hands .phase-box.corner .phase { display: block; font-size: 12px; padding: 2px 9px; }
+
+/* ---------- 牌区对齐：牌的上边缘 = 桌布上下中线；水印标题紧贴牌上方；点数在水印上方（横竖屏一致） ---------- */
+.table-page .hands, .table-page.landscape .hands, .table-page.portrait .hands { top: 0; bottom: 0; height: auto; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: 1fr 1fr; align-items: start; padding: 0 8px; gap: 0 8px; overflow: visible; }
+.table-page .hand.player { grid-area: 2 / 1; } .table-page .hand.banker { grid-area: 2 / 2; }
+.table-page .hand, .table-page.landscape .hand { height: calc(var(--card-h) + 4px); padding: 0 4px; overflow: visible; }
+.table-page .hand .cards { top: 0; bottom: auto; }
+.table-page .hand-title, .table-page.landscape .hand-title { top: auto; bottom: calc(100% + 2px); font-size: 12px; letter-spacing: 3px; }
+.table-page .hand-total, .table-page.landscape .hand-total { top: auto; bottom: calc(100% + 22px); right: auto; left: 50%; transform: translate(-50%, 0) scale(.6); }
+.table-page .hand-total.show { transform: translate(-50%, 0) scale(1); }
+.table-page .squeeze-hint { top: auto; bottom: calc(100% + 40px); }
+.table-page .hand.win { border-color: transparent; background: transparent; box-shadow: none; }
+.table-page .hand.win .cards .card { box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(212,175,55,.6); }
+.table-page .hands .phase-box, .table-page .hands .phase-box.corner, .table-page.landscape .hands .phase-box, .table-page.landscape .hands .phase-box.corner { top: 8px; right: 8px; bottom: auto; grid-area: auto; }
+/* 竖屏：牌位置保持原来靠下，只把点数挪到水印上方 */
+.table-page.portrait .hands { grid-template-rows: 1fr; align-items: end; padding-bottom: 6%; }
+.table-page.portrait .hand.player { grid-area: 1 / 1; } .table-page.portrait .hand.banker { grid-area: 1 / 2; }
