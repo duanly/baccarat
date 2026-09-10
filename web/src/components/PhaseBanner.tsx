@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { TablePhase } from '../lib/protocol';
 import { useCountdown } from '../lib/useCountdown';
 
-export function PhaseBanner({ phase, secs, roundId, nextRoundAt }: { phase: TablePhase; secs: number; roundId: string | null; nextRoundAt: number | null }) {
+export function PhaseBanner({ phase, secs, roundId, nextRoundAt, countdownEndsAt }: { phase: TablePhase; secs: number; roundId: string | null; nextRoundAt: number | null; countdownEndsAt: number | null }) {
   const [banner, setBanner] = useState<'open' | 'close' | null>(null);
   const lastRound = useRef<string | null>(null);
   const lastPhase = useRef<TablePhase | null>(null);
@@ -19,7 +19,8 @@ export function PhaseBanner({ phase, secs, roundId, nextRoundAt }: { phase: Tabl
     // 新一局进入投注：开始投注横幅
     if (phase === 'betting' && lastRound.current !== roundId) {
       lastRound.current = roundId;
-      if (secs <= 5) return;            // 中途进桌且已到最后 5 秒：直接走倒计时，不再弹开始横幅
+      // 中途进桌且已到最后 5 秒：直接走倒计时，不再弹开始横幅（用服务端时间算，secs 这一帧还是旧值）
+      if (countdownEndsAt && countdownEndsAt - Date.now() <= 5000) return;
       setBanner('open');
       const t = setTimeout(() => setBanner(null), 1400);
       return () => clearTimeout(t);

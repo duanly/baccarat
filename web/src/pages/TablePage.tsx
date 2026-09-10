@@ -33,6 +33,7 @@ export function TablePage() {
   const [mySettlements, setMySettlements] = useState<any[] | null>(null);
   const [overlay, setOverlay] = useState(false);       // 结算画面
   const [help, setHelp] = useState(false);             // 玩法说明浮窗
+  const [cleared, setCleared] = useState(false);       // 结算画面结束后清空桌面上一局的牌
   const [paidOut, setPaidOut] = useState(false);       // 派彩动画已完成 → 隐藏桌上筹码
   const payoutDone = useRef(false);
   const [myAllIn, setMyAllIn] = useState(false);
@@ -64,7 +65,7 @@ export function TablePage() {
             if (m.myBets) setConfirmed(m.myBets);
             else if (prev && prev.roundId !== m.table.roundId) { setConfirmed({}); setPending({}); setMyAllIn(false); } // 新一局：清空注码
             if (!prev || prev.roundId !== m.table.roundId) {
-              setOverlay(false); setPaidOut(false); setMySettlements(null); payoutDone.current = false;
+              setOverlay(false); setPaidOut(false); setMySettlements(null); setCleared(false); payoutDone.current = false;
               // 新一局 / 首次进桌：已有的牌视为已落桌；咪牌记录清空
               setLanded({ player: m.table.playerCards.length, banker: m.table.bankerCards.length });
               setFlights([]);
@@ -206,12 +207,12 @@ export function TablePage() {
   const allRevealed = !table || table.kind !== 'live' || [...table.playerCards.keys()].every((i) => revealed.has('player' + i)) && [...table.bankerCards.keys()].every((i) => revealed.has('banker' + i));
   const showResult = !!table && table.phase === 'settling' && !!r && allRevealed;
 
-  // 开奖（且咪牌桌全部翻开）→ 结算画面 2.4s → 派彩动画
+  // 开奖（且咪牌桌全部翻开）→ 结算画面 2.8s → 清空桌面 + 派彩动画 + 开局 3 秒倒计时（服务端派彩停顿 6s）
   useEffect(() => {
     if (!showResult || payoutDone.current) return;
     payoutDone.current = true;
     setOverlay(true);
-    const t1 = setTimeout(() => { setOverlay(false); runPayout(); }, 2400);
+    const t1 = setTimeout(() => { setOverlay(false); setCleared(true); runPayout(); }, 2800);
     return () => clearTimeout(t1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showResult]);
@@ -292,9 +293,9 @@ export function TablePage() {
             : <DealerScene flights={flights} onLanded={onLanded} shoeId={table.shoeId} />}
 
           {overlay && r && <SettleOverlay result={r} myNet={lastSettle} onClick={() => setOverlay(false)} />}
-          <PhaseBanner phase={table.phase} secs={secs} roundId={table.roundId} nextRoundAt={table.nextRoundAt ?? null} />
+          <PhaseBanner phase={table.phase} secs={secs} roundId={table.roundId} nextRoundAt={table.nextRoundAt ?? null} countdownEndsAt={table.countdownEndsAt} />
           <div className="hands">
-            <Hand side="player" cards={table.playerCards} total={table.playerTotal} win={showResult ? r!.outcome === 'player' : false}
+            <Hand side="player" cards={cleared ? [] : table.playerCards} total={cleared ? 0 : table.playerTotal} win={showResult && !cleared ? r!.outcome === 'player' : false}
               landed={table.kind === 'rng' ? landed.player : undefined} squeeze={table.kind === 'live'} revealed={revealed} onReveal={reveal} />
             {/* 派彩阶段：阶段/胜方/输赢挪到牌桌右上角，中间留给开局倒计时（中间仍保留占位，庄闲位置不动） */}
             <div className={`phase-box ${table.phase === 'settling' ? 'corner' : ''}`}>
@@ -303,7 +304,7 @@ export function TablePage() {
               {lastSettle !== null && <div className={`settle ${lastSettle >= 0 ? 'win' : 'lose'}`}>{lastSettle >= 0 ? '+' : ''}{lastSettle.toLocaleString()}</div>}
             </div>
             {table.phase === 'settling' && <div className="phase-box placeholder" aria-hidden />}
-            <Hand side="banker" cards={table.bankerCards} total={table.bankerTotal} win={showResult ? r!.outcome === 'banker' : false}
+            <Hand side="banker" cards={cleared ? [] : table.bankerCards} total={cleared ? 0 : table.bankerTotal} win={showResult && !cleared ? r!.outcome === 'banker' : false}
               landed={table.kind === 'rng' ? landed.banker : undefined} squeeze={table.kind === 'live'} revealed={revealed} onReveal={reveal} />
           </div>
         </div>
@@ -337,7 +338,7 @@ export function TablePage() {
             <button onClick={rebet} disabled={!betting || !lastBets} className="ghost">重复</button>
             <button onClick={clearAll} disabled={!betting || total(shown) === 0} className="ghost">清除</button>
             <button onClick={submit} disabled={!betting || total(pending) === 0} className={`primary confirm ${total(pending) > 0 ? 'pulse' : ''} ${pendingAllIn ? 'allin' : ''}`}>
-              {pendingAllIn ? `梭哈 ALL IN $${total(pending).toLocaleString()}` : `确认 $${total(pending).toLocaleString()}`}
+              {pendingAllIn ? `梭哈 $${total(pending).toLocaleString()}` : `确认 $${total(pending).toLocaleString()}`}
             </button>
           </div>
           <div className={`bet-hint ${total(pending) > 0 ? 'active' : ''}`}>

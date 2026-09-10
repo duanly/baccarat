@@ -11,6 +11,11 @@ import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import type { BetType, Card, HandResult, TableKind, TablePhase } from './types.js';
 import { BET_TYPES } from './types.js';
+
+const BET_NAMES: Record<string, string> = {
+  player: '闲', banker: '庄', tie: '和', playerPair: '闲对', bankerPair: '庄对', anyPair: '任意对子',
+  perfectPair: '完美对子', lucky6: '幸运6', lucky7: '幸运7', big: '大', small: '小',
+};
 import { Shoe } from './rng.js';
 import { Hand } from './rules.js';
 import { DEFAULT_PAYOUTS, settleBets, round2, type PayoutTable, type BetSettlement } from './payouts.js';
@@ -129,7 +134,7 @@ export class BaccaratTable extends EventEmitter {
       maxBet: 10000,
       maxSideBet: 1000,
       bettingSeconds: cfg.kind === 'rng' ? 12 : 20,
-      resultPauseSeconds: cfg.kind === 'rng' ? 8 : 9,   // 结算画面 + 派彩动画的时间
+      resultPauseSeconds: cfg.kind === 'rng' ? 6 : 9,   // 结算画面 2.8s + 派彩动画/开局倒计时 3s
       dealIntervalMs: 1500,                            // 逐张发牌间隔（放慢，含飞牌动画）
       payouts: DEFAULT_PAYOUTS,
       ...cfg,
@@ -335,7 +340,7 @@ export class BaccaratTable extends EventEmitter {
       const next = round2((merged[t] ?? 0) + v);
       const isMain = t === 'player' || t === 'banker' || t === 'tie';
       const cap = isMain ? this.cfg.maxBet : this.cfg.maxSideBet;
-      if (next > cap) throw new Error(`${t} 超过限红 ${cap}`);
+      if (next > cap) throw new Error(`「${BET_NAMES[t] ?? t}」超过限红 ${cap.toLocaleString()}`);
       merged[t] = next;
       total = round2(total + v);
     }

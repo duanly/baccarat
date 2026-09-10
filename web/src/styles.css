@@ -577,7 +577,7 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 .table-page .spot.tie .spot-name { color: rgba(110,220,150,.32); }
 .table-page .spot.hit .spot-name { color: rgba(255,255,255,.75); }
 .table-page .spot-odds, .table-page.landscape .spot-odds { position: absolute; left: 0; right: 0; bottom: 3px; text-align: center; font-size: 10px; color: rgba(255,255,255,.55); pointer-events: none; }
-.table-page .spot .mine-wrap, .table-page .spot .others-wrap, .table-page .spot .spot-amount { position: relative; z-index: 1; }
+.table-page .spot .mine-wrap, .table-page .spot .others-wrap, .table-page .spot .spot-amount { z-index: 1; }
 
 /* ---------- 竖屏：顶栏高度含刘海安全区，三块整体再压缩一点，确认键不再出屏 ---------- */
 .table-page.portrait { --top: calc(52px + env(safe-area-inset-top)); }
@@ -685,3 +685,16 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 .table-page .bet-area.open .spot.has-pending { border-color: var(--gold); box-shadow: 0 0 12px rgba(212,175,55,.45); }
 .table-page .bet-area.closed .spot { filter: brightness(.7) saturate(.8); pointer-events: none; }
 .table-page .bet-area.closed .spot.hit { filter: none; }
+
+/* ---------- 横屏：赔率不上板；筹码与金额左右排列；重复/清除固定、确认加宽 ---------- */
+.table-page .spot-odds, .table-page.landscape .spot-odds { display: none; }
+.table-page.landscape .mine-wrap { right: auto; left: 50%; top: 50%; transform: translate(-100%, -50%); margin-left: -4px; }
+.table-page.landscape .spot-amount { bottom: auto; top: 50%; transform: translateY(-50%); right: auto; left: 50%; margin-left: 6px; font-size: 11px; padding: 1px 6px; }
+.table-page.landscape .spot.main-spot .mine-wrap { margin-left: -6px; }
+.table-page.landscape .others-wrap { left: 3px; bottom: 2px; }
+.table-page.landscape .actions { display: flex; gap: 6px; flex: 0 0 auto; }
+.table-page.landscape .actions button { flex: 0 0 auto; width: 50px; min-width: 0; padding: 0; font-size: 12px; height: 30px; }
+.table-page.landscape .actions button.confirm { flex: 0 0 auto; width: 124px; font-size: 12px; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.table-page.landscape .chips { gap: 4px; }
+.table-page.landscape .chip { flex: 0 1 38px; min-width: 26px; }
+.table-page.landscape .allin-badge { top: 2px; right: 3px; font-size: 8px; padding: 0 4px; letter-spacing: 0; }
