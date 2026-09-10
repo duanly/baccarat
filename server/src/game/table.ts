@@ -222,7 +222,8 @@ export class BaccaratTable extends EventEmitter {
     if (this.phase !== 'betting') return;
     this.countdownEndsAt = null;
     this.setPhase('dealing');
-    if (this.cfg.kind === 'rng') this.dealNextRngCard();
+    // RNG 桌：等前端"停止下注"横幅（1.4s）播完再留 0.3s 空隙才发第一张牌
+    if (this.cfg.kind === 'rng') this.schedule(1700, () => this.dealNextRngCard());
     // 实况桌：等待荷官喂牌
   }
 

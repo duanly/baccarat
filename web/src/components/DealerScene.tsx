@@ -15,17 +15,17 @@ export function DealerScene({ flights, onLanded, shoeId, remaining }: {
   flights: Flight[]; onLanded: (id: number) => void; shoeId?: string | null; remaining?: number;
 }) {
   const shoeRef = useRef<HTMLDivElement>(null);
-  const [dealing, setDealing] = useState(false);
+  const [dealing, setDealing] = useState<'' | 'player' | 'banker'>('');
 
   useEffect(() => {
     if (!flights.length) return;
-    setDealing(true);
-    const t = setTimeout(() => setDealing(false), 650);
+    setDealing(flights[flights.length - 1].side);   // 往哪边派牌，牌盒就朝哪边动一下
+    const t = setTimeout(() => setDealing(''), 650);
     return () => clearTimeout(t);
   }, [flights.length]);
 
   return (
-    <div className={`dealer-scene ${dealing ? 'dealing' : ''}`}>
+    <div className={`dealer-scene ${dealing ? `dealing to-${dealing}` : ''}`}>
 
       <div className="shoe" ref={shoeRef} title={`牌靴 ${shoeId ?? ''}`}>
         <div className="shoe-body">
@@ -49,7 +49,7 @@ function Flyer({ flight, shoeRef, onLanded }: { flight: Flight; shoeRef: React.R
     const target = scene?.querySelector(`.hand.${flight.side} .cards`) as HTMLElement | null;
     const base = (el.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? { left: 0, top: 0 };
     const s = shoe.getBoundingClientRect();
-    const from = { x: s.left + s.width * 0.15 - base.left, y: s.top + s.height * 0.5 - base.top };
+    const from = { x: s.left + s.width * 0.5 - 26 - base.left, y: s.top + s.height * 0.85 - base.top };   // 从牌盒底部出口飞出
     let to = { x: from.x - 200, y: from.y + 160 };
     if (target) {
       // 落点：第一张尚未落桌的占位格；没有则落在牌区中央

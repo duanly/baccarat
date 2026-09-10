@@ -873,3 +873,17 @@ html, body { overscroll-behavior: none; }
 /* 流水列左对齐（从列中部起），输赢列靠最右 */
 .lb th:nth-child(4), .lb td:nth-child(4) { text-align: left; padding-left: 10px; }
 .lb th:nth-child(5), .lb td:nth-child(5) { text-align: right; padding-right: 8px; }
+/* 玩家列表列宽改为百分比（横竖屏一致）：前三列合计 50%，流水从表格正中开始左对齐，输赢靠最右 */
+.lb th:nth-child(1) { width: 8%; } .lb th:nth-child(2) { width: 19%; } .lb th:nth-child(3) { width: 23%; }
+.lb th:nth-child(4), .table-page.landscape .lb th:nth-child(4) { width: 26%; } .lb th:nth-child(5), .table-page.landscape .lb th:nth-child(5) { width: 24%; }
+.lb th:nth-child(4), .lb td:nth-child(4) { padding-left: 6px; }
+.lb th:nth-child(5), .lb td:nth-child(5) { padding-right: 10px; }
+
+/* ---------- 牌盒：更短、出口朝下；派牌时朝对应一侧点头 ---------- */
+.shoe, .table-page.landscape .shoe { width: 44px; margin-left: -22px; top: 8px; transform: none; opacity: .9; transform-origin: 50% 20%; transition: transform .18s cubic-bezier(.2,.8,.3,1.3); }
+.shoe-body { height: 34px; border-radius: 6px 6px 8px 8px; background: linear-gradient(180deg, #2c2c31, #111114); }
+.shoe-cards { left: 6px; right: 6px; top: 5px; height: 12px; }
+.shoe-lip { left: 50%; bottom: -5px; top: auto; width: 24px; height: 8px; margin-left: -12px; background: #eee; border-radius: 0 0 3px 3px; box-shadow: 0 2px 4px rgba(0,0,0,.45); }
+.dealer-scene.dealing.to-player .shoe { transform: rotate(-10deg) translate(-6px, 3px); }
+.dealer-scene.dealing.to-banker .shoe { transform: rotate(10deg) translate(6px, 3px); }
+@media (max-width: 640px) { .shoe { width: 44px; margin-left: -22px; top: 8px; } }
