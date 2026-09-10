@@ -325,12 +325,14 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 .shoe-lip { position: absolute; left: -5px; bottom: 4px; width: 9px; height: 16px; background: #eee; border-radius: 2px; box-shadow: -2px 0 4px rgba(0,0,0,.4); }
 .shoe-label { display: none; }
 .flyer { position: absolute; width: var(--card-w); height: var(--card-h); z-index: 5; perspective: 400px; pointer-events: none; }
-.flyer-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; animation: flip3d .62s linear forwards; }
-.flyer-back, .flyer-face { position: absolute; inset: 0; border-radius: 6px; backface-visibility: hidden; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
-.flyer-back { background: repeating-linear-gradient(45deg, #8b1e2b 0 4px, #6e1521 4px 8px); border: 3px solid #f4e7c3; }
-.flyer-face { background: #fff; color: #111; display: grid; place-items: center; font-weight: 800; font-size: 18px; transform: rotateY(180deg); }
+.flyer-inner { position: relative; width: 100%; height: 100%; }
+/* 翻牌用 2D 的 scaleX 实现（不用 rotateY + backface-visibility：iOS WebKit 在父级还有变换动画时会把牌面透出来，看起来牌背忽红忽黑） */
+.flyer-back, .flyer-face { position: absolute; inset: 0; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,.5); will-change: transform, opacity; }
+.flyer-back { background: repeating-linear-gradient(45deg, #8b1e2b 0 4px, #6e1521 4px 8px); border: 3px solid #f4e7c3; box-sizing: border-box; animation: flipBack .62s linear forwards; }
+.flyer-face { background: #fff; color: #111; display: grid; place-items: center; font-weight: 800; font-size: 18px; opacity: 0; transform: scaleX(0); animation: flipFace .62s linear forwards; }
 .flyer-face.red { color: var(--red); }
-@keyframes flip3d { from { transform: rotateY(0); } to { transform: rotateY(180deg); } }
+@keyframes flipBack { 0% { transform: scaleX(1); opacity: 1; } 49.9% { transform: scaleX(0); opacity: 1; } 50% { opacity: 0; } 100% { transform: scaleX(0); opacity: 0; } }
+@keyframes flipFace { 0%, 49.9% { transform: scaleX(0); opacity: 0; } 50% { transform: scaleX(0); opacity: 1; } 100% { transform: scaleX(1); opacity: 1; } }
 .card-slot.arriving { opacity: .25; }
 .table-page.landscape .shoe { width: 48px; margin-left: -24px; top: 4px; }
 
@@ -368,7 +370,8 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 .cf-court-suit { position: absolute; font-size: 14cqh; line-height: 1; }
 .cf-court-suit.tl { top: 3px; left: 3px; } .cf-court-suit.br { bottom: 3px; right: 3px; transform: rotate(180deg); }
 .card { position: relative; }
-.flyer-face { overflow: hidden; }
+.flyer-face { overflow: hidden; container-type: size; }
+.flyer-face .cf { position: absolute; inset: 0; }
 
 
 /* ---------- 飞行中的筹码 ---------- */
