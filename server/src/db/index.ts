@@ -106,6 +106,17 @@ function migrate(db: DB) {
     );
     CREATE INDEX IF NOT EXISTS idx_bets_round ON bets(round_id);
     CREATE INDEX IF NOT EXISTS idx_bets_user ON bets(user_id, id);
+    -- 后台可调的每桌参数（下注时长 / 发牌间隔 / 派彩停顿 / 限红）
+    CREATE TABLE IF NOT EXISTS table_settings (
+      table_id             TEXT PRIMARY KEY,
+      betting_seconds      INTEGER,
+      deal_interval_ms     INTEGER,
+      result_pause_seconds INTEGER,
+      min_bet              REAL,
+      max_bet              REAL,
+      max_side_bet         REAL,
+      updated_at           INTEGER NOT NULL
+    );
   `);
   // 追加列（幂等）
   for (const sql of [

@@ -32,11 +32,15 @@ auth.ensureAdmin(ADMIN_USER, ADMIN_PASS);
 const tables = new TableManager(wallet, new SqlitePersistence(db));
 seedDefaultLayout(tables, { mediaBase: MEDIA_BASE, rngTables: Number(process.env.RNG_TABLES ?? 12), vipHalls: Number(process.env.VIP_HALLS ?? 3) });
 // 后台保存过的每桌参数（下注时长 / 发牌间隔 / 派彩停顿 / 限红）
-for (const row of db.prepare('SELECT * FROM table_settings').all() as any[]) {
-  tables.tables.get(row.table_id)?.updateSettings({
-    bettingSeconds: row.betting_seconds ?? undefined, dealIntervalMs: row.deal_interval_ms ?? undefined, resultPauseSeconds: row.result_pause_seconds ?? undefined,
-    minBet: row.min_bet ?? undefined, maxBet: row.max_bet ?? undefined, maxSideBet: row.max_side_bet ?? undefined,
-  });
+try {
+  for (const row of db.prepare('SELECT * FROM table_settings').all() as any[]) {
+    tables.tables.get(row.table_id)?.updateSettings({
+      bettingSeconds: row.betting_seconds ?? undefined, dealIntervalMs: row.deal_interval_ms ?? undefined, resultPauseSeconds: row.result_pause_seconds ?? undefined,
+      minBet: row.min_bet ?? undefined, maxBet: row.max_bet ?? undefined, maxSideBet: row.max_side_bet ?? undefined,
+    });
+  }
+} catch (e: any) {
+  console.warn('[table_settings] 读取失败（跳过，使用默认参数）:', e.message);
 }
 
 const app = express();
