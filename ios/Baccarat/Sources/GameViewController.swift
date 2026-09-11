@@ -213,6 +213,26 @@ extension GameViewController: WKNavigationDelegate, WKUIDelegate {
         decisionHandler(.grant)
     }
 
+    /// JS 的 alert / confirm / prompt：WKWebView 默认不弹窗（直接当取消处理），这里用系统弹窗实现
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+        let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        a.addAction(UIAlertAction(title: "好", style: .default) { _ in completionHandler() })
+        present(a, animated: true)
+    }
+    func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+        let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        a.addAction(UIAlertAction(title: "取消", style: .cancel) { _ in completionHandler(false) })
+        a.addAction(UIAlertAction(title: "确定", style: .default) { _ in completionHandler(true) })
+        present(a, animated: true)
+    }
+    func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+        let a = UIAlertController(title: nil, message: prompt, preferredStyle: .alert)
+        a.addTextField { $0.text = defaultText }
+        a.addAction(UIAlertAction(title: "取消", style: .cancel) { _ in completionHandler(nil) })
+        a.addAction(UIAlertAction(title: "确定", style: .default) { _ in completionHandler(a.textFields?.first?.text ?? "") })
+        present(a, animated: true)
+    }
+
     /// target=_blank 的链接在当前 WebView 打开
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil { webView.load(navigationAction.request) }

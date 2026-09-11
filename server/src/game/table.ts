@@ -41,6 +41,10 @@ export interface TableConfig {
   /** 实况桌：WebRTC(WHEP) 播放地址；荷官名 */
   stream?: { whepUrl: string; fallbackHlsUrl?: string };
   dealerName?: string;
+  /** 同时在桌人数上限（快速桌 / VIP 桌 / 私人房统一 12） */
+  capacity: number;
+  /** 私人房：房主 id（有值即为私人房） */
+  ownerId?: number;
 }
 
 export type Bets = Partial<Record<BetType, number>>;
@@ -71,6 +75,7 @@ export interface TableSnapshot {
   roundNo: number;
   shoeId: string | null;
   countdownEndsAt: number | null;
+  capacity: number; ownerId: number | null;
   /** RNG 桌：下一局开始投注的时间（结算阶段用来做开局倒计时） */
   nextRoundAt: number | null;
   playerCards: Card[];
@@ -140,6 +145,7 @@ export class BaccaratTable extends EventEmitter {
       resultPauseSeconds: cfg.kind === 'rng' ? 4.5 : 9,   // 结算画面 1.5s + 渐隐/开局倒计时 3s
       dealIntervalMs: 2200,                            // 逐张发牌间隔（放慢，含飞牌动画）
       payouts: DEFAULT_PAYOUTS,
+      capacity: 12,
       ...cfg,
     };
   }
@@ -346,7 +352,7 @@ export class BaccaratTable extends EventEmitter {
     const cur = this.bets.get(userId) ?? {};
     let total = 0;
     let remaining = this.wallet.balance(userId);
-    if (remaining <= 0) throw new Error('余额不足');
+    if (remaining <= 0) throw new Error(this.cfg.ownerId ? '私房积分不足，请找房主上分' : '余额不足');
     let allIn = false;
     const merged: Bets = { ...cur };
     for (const [t, raw] of Object.entries(add) as [BetType, number][]) {
@@ -417,7 +423,10 @@ export class BaccaratTable extends EventEmitter {
 
   // ---------- 在线人数 / 排行榜 ----------
 
+  get isFull(): boolean { return this.online.size >= this.cfg.capacity; }
+
   join(userId: number, nickname: string) {
+    if (!this.online.has(userId) && this.isFull) throw new Error('FULL');
     this.online.add(userId);
     this.nicknames.set(userId, nickname);
     if (!this.sessions.has(userId)) this.sessions.set(userId, { userId, nickname, wagered: 0, net: 0, rounds: 0 });
@@ -475,7 +484,7 @@ export class BaccaratTable extends EventEmitter {
       payouts: this.cfg.payouts,
       stream: this.cfg.stream,
       dealerName: this.cfg.dealerName,
-      playersOnline: this.online.size,
+      playersOnline: this.online.size, capacity: this.cfg.capacity, ownerId: this.cfg.ownerId ?? null,
       leaderboard: this.leaderboard(),
       serverTime: Date.now(),
     };
@@ -488,7 +497,7 @@ export class BaccaratTable extends EventEmitter {
       id: this.cfg.id, name: this.cfg.name, kind: this.cfg.kind, hallId: this.cfg.hallId,
       phase: this.phase, roundNo: this.roundNo, countdownEndsAt: this.countdownEndsAt, nextRoundAt: this.nextRoundAt,
       limits: { minBet: this.cfg.minBet, maxBet: this.cfg.maxBet },
-      dealerName: this.cfg.dealerName, playersOnline: this.online.size,
+      dealerName: this.cfg.dealerName, playersOnline: this.online.size, capacity: this.cfg.capacity, full: this.isFull,
       stats: s, recent: this.history.slice(-30), bigRoad: this.roadmap.bigRoad.slice(-12),
     };
   }

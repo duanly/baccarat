@@ -5,6 +5,7 @@ import type { TableManager } from '../game/manager.js';
 import type { Card, Rank, Suit } from '../game/types.js';
 import type { DB } from '../db/index.js';
 import { clientIp, deviceFromUa } from '../presence.js';
+import { PRIVATE_HALL, type RoomService } from '../rooms.js';
 
 export interface Deps {
   auth: AuthService;
@@ -12,6 +13,7 @@ export interface Deps {
   tables: TableManager;
   db: DB;
   dealerApiKey: string;
+  rooms: RoomService;
 }
 
 declare global {
@@ -24,7 +26,7 @@ export function apiRouter(d: Deps): Router {
   const r = Router();
 
   const requireUser = (req: Request, _res: Response, next: NextFunction) => {
-    const token = req.headers.authorization?.replace(/^Bearer /, '');
+    const token = req.headers.authorization?.replace(/^Bearer /, '') || (typeof req.query.token === 'string' ? req.query.token : undefined);   // 下载类链接用 ?token=
     const user = d.auth.authenticate(token);
     if (!user) return next(new HttpError(401, '未登录'));
     req.user = user;
@@ -67,7 +69,7 @@ export function apiRouter(d: Deps): Router {
   r.get('/halls', requireUser, (req, res) => {
     const vip = req.user!.vipLevel;
     res.json({
-      halls: d.tables.halls.map((h) => ({
+      halls: d.tables.halls.filter((h) => h.id !== PRIVATE_HALL).map((h) => ({
         ...h, locked: vip < h.minVipLevel,
         tables: h.tableIds.map((id) => d.tables.get(id).summary()),
       })),
@@ -78,7 +80,8 @@ export function apiRouter(d: Deps): Router {
     const t = d.tables.get(req.params.id);
     const hall = d.tables.hallOf(t.cfg.id);
     if (hall && req.user!.vipLevel < hall.minVipLevel) throw new HttpError(403, `需要 VIP${hall.minVipLevel} 等级`);
-    res.json({ table: t.snapshot(), myBets: t.getBets(req.user!.id) });
+    if (t.cfg.hallId === PRIVATE_HALL) d.rooms.assertCanEnter(t.cfg.id, req.user!.id);
+    res.json({ table: t.snapshot(), myBets: t.getBets(req.user!.id), room: t.cfg.hallId === PRIVATE_HALL ? d.rooms.info(t.cfg.id, req.user!.id) : null });   // room.credit = 我在本房可用的私房积分
   });
 
   r.post('/tables/:id/bets', requireUser, (req, res) => {
@@ -93,6 +96,37 @@ export function apiRouter(d: Deps): Router {
   r.delete('/tables/:id/bets', requireUser, (req, res) => {
     const t = d.tables.get(req.params.id);
     res.json({ balance: t.clearBets(req.user!.id) });
+  });
+
+  // ---------- 私人房间 ----------
+  r.get('/rooms/mine', requireUser, (req, res) => res.json({ items: d.rooms.mine(req.user!.id) }));
+  r.post('/rooms', requireUser, (req, res) => res.json(d.rooms.create(req.user!.id, { canHost: req.user!.canHost, maxRooms: req.user!.maxRooms }, req.body ?? {})));
+  r.post('/rooms/join', requireUser, (req, res) => res.json(d.rooms.joinByPassword(req.user!.id, req.body?.password)));
+  r.get('/rooms/:id', requireUser, (req, res) => { d.rooms.assertCanEnter(req.params.id, req.user!.id); res.json(d.rooms.info(req.params.id, req.user!.id)); });
+  r.get('/rooms/:id/members', requireUser, (req, res) => res.json({ items: d.rooms.members(req.params.id, req.user!.id) }));
+  r.patch('/rooms/:id', requireUser, (req, res) => {
+    const b = req.body ?? {};
+    let info = d.rooms.info(req.params.id, req.user!.id);
+    if (typeof b.locked === 'boolean') info = d.rooms.setLocked(req.params.id, req.user!.id, b.locked);
+    if (b.minBet != null || b.maxBet != null || b.maxSideBet != null) info = d.rooms.setLimits(req.params.id, req.user!.id, b);
+    if (typeof b.name === 'string') info = d.rooms.rename(req.params.id, req.user!.id, b.name);
+    res.json(info);
+  });
+  r.post('/rooms/:id/transfer', requireUser, (req, res) => res.json(d.rooms.transfer(req.params.id, req.user!.id, Number(req.body?.userId), Number(req.body?.amount), req.body?.note)));
+  r.delete('/rooms/:id/members/:uid', requireUser, (req, res) => { d.rooms.kick(req.params.id, req.user!.id, Number(req.params.uid)); res.json({ ok: true }); });
+  r.delete('/rooms/:id', requireUser, (req, res) => { d.rooms.close(req.params.id, req.user!.id); res.json({ ok: true }); });
+  r.get('/rooms/:id/ledger.csv', requireUser, (req, res) => {
+    const rows = d.rooms.ledger(req.params.id, req.user!.id);
+    const info = d.rooms.info(req.params.id, req.user!.id);
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const head = ['时间', '局号', '玩家', '账号', '投注区', '注码', '返还', '输赢', '结果', '闲点', '庄点'];
+    const lines = rows.map((x) => [new Date(x.created_at).toLocaleString('zh-CN', { hour12: false }), x.round_no, x.nickname, x.username, x.bet_type, x.amount, x.returned, x.net, x.outcome, x.player_total, x.banker_total].map(esc).join(','));
+    const totalW = rows.reduce((a, x) => a + x.amount, 0), totalN = rows.reduce((a, x) => a + (x.net ?? 0), 0);
+    lines.push(['合计', '', '', '', '', totalW, '', totalN, '', '', ''].map(esc).join(','));
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    const fname = encodeURIComponent(`${info.name}-账单.csv`);
+    res.setHeader('Content-Disposition', `attachment; filename="room-${info.id.slice(5)}.csv"; filename*=UTF-8''${fname}`);
+    res.send('\ufeff' + head.map(esc).join(',') + '\n' + lines.join('\n'));
   });
 
   r.get('/tables/:id/rounds', requireUser, (req, res) => {
@@ -157,7 +191,7 @@ export function parseCard(s: string): Card {
 }
 
 export function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
-  const status = err instanceof HttpError ? err.status : 500;
+  const status = err instanceof HttpError ? err.status : /not found$/.test(err?.message ?? '') ? 404 : 500;
   if (status === 500) console.error(err);
   res.status(status).json({ error: err.message ?? 'internal error' });
 }

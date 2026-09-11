@@ -11,6 +11,7 @@ import { apiRouter, errorHandler } from './http/routes.js';
 import { attachWs } from './ws/server.js';
 import { adminRouter } from './http/admin.js';
 import { Presence } from './presence.js';
+import { RoomService } from './rooms.js';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const DB_PATH = process.env.DB_PATH ?? join(dirname(fileURLToPath(import.meta.url)), '../../data/baccarat.db');
@@ -53,8 +54,9 @@ app.use((_req, res, next) => {
   next();
 });
 app.get('/health', (_req, res) => res.json({ ok: true, tables: tables.tables.size }));
-app.use('/api/admin', adminRouter({ db, auth, wallet, presence, tables }));
-app.use('/api', apiRouter({ auth, wallet, tables, db, dealerApiKey: DEALER_API_KEY }));
+const rooms = new RoomService(db, wallet, tables);
+app.use('/api/admin', adminRouter({ db, auth, wallet, presence, tables, rooms }));
+app.use('/api', apiRouter({ auth, wallet, tables, db, dealerApiKey: DEALER_API_KEY, rooms }));
 
 // 生产：托管前端构建产物
 const webDist = join(dirname(fileURLToPath(import.meta.url)), '../../web/dist');
@@ -65,8 +67,9 @@ if (existsSync(webDist)) {
 app.use(errorHandler);
 
 const server = createServer(app);
-attachWs(server, auth, tables, presence);
+attachWs(server, auth, tables, presence, rooms);
 tables.startAll();
+rooms.restore();   // 恢复活跃的私人房间（各自独立的 RNG 牌桌）
 
 server.listen(PORT, () => {
   console.log(`baccarat server on http://localhost:${PORT}  (db: ${DB_PATH})`);

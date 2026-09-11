@@ -9,7 +9,7 @@ export type BetType =
 export type Bets = Partial<Record<BetType, number>>;
 export type TablePhase = 'idle' | 'betting' | 'dealing' | 'settling' | 'shuffling' | 'maintenance';
 
-export interface User { id: number; username: string; nickname: string; vipLevel: number; balance: number; role: string }
+export interface User { id: number; username: string; nickname: string; vipLevel: number; balance: number; role: string; canHost?: boolean; maxRooms?: number }
 
 export interface HandResult {
   playerCards: Card[]; bankerCards: Card[]; playerTotal: number; bankerTotal: number;
@@ -44,12 +44,12 @@ export interface TableSnapshot {
   lastResult: HandResult | null; roadmap: Roadmap;
   limits: { minBet: number; maxBet: number; maxSideBet: number }; payouts: PayoutTable;
   stream?: { whepUrl: string; fallbackHlsUrl?: string }; dealerName?: string;
-  playersOnline: number; leaderboard: LeaderboardEntry[]; serverTime: number;
+  playersOnline: number; capacity?: number; ownerId?: number | null; leaderboard: LeaderboardEntry[]; serverTime: number;
 }
 
 export interface TableSummary {
   id: string; name: string; kind: 'rng' | 'live'; hallId: string; phase: TablePhase; roundNo: number;
-  countdownEndsAt: number | null; nextRoundAt?: number | null; limits: { minBet: number; maxBet: number }; dealerName?: string; playersOnline: number;
+  countdownEndsAt: number | null; nextRoundAt?: number | null; limits: { minBet: number; maxBet: number }; dealerName?: string; playersOnline: number; capacity?: number; full?: boolean;
   stats: Roadmap['stats']; recent: RoundSummary[]; bigRoad: BigRoadCell[][];
 }
 
@@ -74,4 +74,17 @@ export function payoutLabel(t: BetType, p: PayoutTable): string {
     case 'big': return `1:${p.big}`;
     case 'small': return `1:${p.small}`;
   }
+}
+
+/** 私人房间 */
+export interface RoomInfo {
+  id: string; name: string; ownerId: number; ownerName: string; isOwner: boolean; password?: string;
+  locked: boolean; status: string; capacity: number; members: number; online: number; full: boolean; phase: TablePhase; roundNo: number;
+  limits: { minBet: number; maxBet: number; maxSideBet: number }; createdAt: number;
+  /** 我在本房可用的私房积分（房主名下） */
+  credit: number;
+}
+export interface RoomMember {
+  userId: number; nickname: string; username?: string; balance?: number; isOwner: boolean; joinedAt: number; online: boolean;
+  wagered: number; net: number; rounds: number; up: number; down: number;
 }

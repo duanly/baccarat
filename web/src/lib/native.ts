@@ -46,6 +46,9 @@ export const native = {
     if (hasBridge()) void call('openExternal', url);
     else window.open(url, '_blank');
   },
+  setClipboard(text: string) {
+    if (hasBridge()) void call('setClipboard', text);
+  },
   setOrientation(o: 'portrait' | 'landscape' | 'auto') {
     if (hasBridge()) void call('setOrientation', o);
   },

@@ -117,6 +117,35 @@ function migrate(db: DB) {
       max_side_bet         REAL,
       updated_at           INTEGER NOT NULL
     );
+    -- 私人房间（VIP 创建，凭密码进入；房主可管理）
+    CREATE TABLE IF NOT EXISTS rooms (
+      id          TEXT PRIMARY KEY,            -- room-xxxxxx，同时也是牌桌 id
+      name        TEXT NOT NULL,
+      owner_id    INTEGER NOT NULL REFERENCES users(id),
+      password    TEXT NOT NULL,               -- 4–8 位，活跃房间内唯一
+      locked      INTEGER NOT NULL DEFAULT 0,  -- 上锁：非成员不能再进
+      min_bet     REAL NOT NULL,
+      max_bet     REAL NOT NULL,
+      max_side_bet REAL NOT NULL,
+      capacity    INTEGER NOT NULL DEFAULT 12,
+      status      TEXT NOT NULL DEFAULT 'active',   -- active | closed
+      created_at  INTEGER NOT NULL,
+      closed_at   INTEGER
+    );
+    -- 私房积分：玩家在某个房主名下的积分（只能在该房主的房间使用；与大厅积分完全隔离）
+    CREATE TABLE IF NOT EXISTS room_credits (
+      user_id   INTEGER NOT NULL REFERENCES users(id),
+      owner_id  INTEGER NOT NULL REFERENCES users(id),
+      balance   REAL NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (user_id, owner_id)
+    );
+    CREATE TABLE IF NOT EXISTS room_members (
+      room_id    TEXT NOT NULL REFERENCES rooms(id),
+      user_id    INTEGER NOT NULL REFERENCES users(id),
+      joined_at  INTEGER NOT NULL,
+      PRIMARY KEY (room_id, user_id)
+    );
   `);
   // 追加列（幂等）
   for (const sql of [
@@ -128,6 +157,9 @@ function migrate(db: DB) {
     "ALTER TABLE users ADD COLUMN total_online_ms INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE transactions ADD COLUMN operator_id INTEGER",
     "ALTER TABLE transactions ADD COLUMN note TEXT",
+    "ALTER TABLE transactions ADD COLUMN owner_id INTEGER",
+    "ALTER TABLE users ADD COLUMN can_host INTEGER NOT NULL DEFAULT 0",   // 房主权限（后台授予）
+    "ALTER TABLE users ADD COLUMN max_rooms INTEGER NOT NULL DEFAULT 0",  // 最多同时开几间私人房   // 私房积分流水：所属房主；NULL = 大厅积分
   ]) {
     try { db.exec(sql); } catch (e: any) { if (!/duplicate column/i.test(e.message)) throw e; }
   }

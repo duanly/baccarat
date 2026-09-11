@@ -12,6 +12,9 @@ import { CardFace } from '../components/CardFace';
 import { SettleOverlay } from '../components/SettleOverlay';
 import { PhaseBanner } from '../components/PhaseBanner';
 import { BetHelp } from '../components/BetHelp';
+import { RoomPanel } from '../components/RoomPanel';
+import { api } from '../lib/api';
+import type { RoomInfo } from '../lib/protocol';
 import { fly, centerOf, makeChipNode, representativeChips } from '../lib/fly';
 import { native } from '../lib/native';
 import { useCountdown, PHASE_LABEL } from '../lib/useCountdown';
@@ -25,8 +28,12 @@ const SIDE: BetType[] = ['playerPair', 'anyPair', 'bankerPair', 'lucky6', 'big',
 
 export function TablePage() {
   const { id = '' } = useParams();
-  const { user } = useSession();
+  const { user, setUser } = useSession();
   const [table, setTable] = useState<TableSnapshot | null>(null);
+  const [room, setRoom] = useState<RoomInfo | null>(null);     // 私人房信息（只有 room-* 桌有）
+  const [roomCredit, setRoomCredit] = useState<number | null>(null); // 私人房：我在本房的私房积分（与大厅积分隔离）
+  const [roomPanel, setRoomPanel] = useState(false);
+  const [blocked, setBlocked] = useState<string | null>(null); // 满房 / 上锁 / 无权限时的提示
   const [confirmed, setConfirmed] = useState<Bets>({});   // 服务端已接受的本局注码
   const [pending, setPending] = useState<Bets>({});       // 本地待提交
   const history = useRef<BetType[]>([]); // 最近下注过的投注区顺序（撤注用：每按一次撤回一个区的全部注码）
@@ -62,6 +69,10 @@ export function TablePage() {
   const [soundOn, setSoundOn] = useState(sound.enabled);
 
   const flash = useCallback((m: string) => { setToast(m); setTimeout(() => setToast(''), 2500); }, []);
+
+  useEffect(() => {
+    if (id.startsWith('room-')) api.table(id).then((r) => { setRoom(r.room ?? null); setRoomCredit(r.room?.credit ?? 0); }).catch((e) => setBlocked(e.message));
+  }, [id]);
 
   useEffect(() => {
     socket.subscribe(id);
@@ -102,10 +113,12 @@ export function TablePage() {
           setTable((t) => t && ({ ...t, leaderboard: m.leaderboard }));
           break;
         case 'bet:ok':
+          if (m.walletKind === 'room' && typeof m.balance === 'number') setRoomCredit(m.balance);
           setConfirmed(m.bets); setPending({});
           if (m.allIn) { setMyAllIn(true); flash('梭哈 ALL IN！'); native.vibrate(); }
           break;
         case 'settled': {
+          if (m.walletKind === 'room' && typeof m.balance === 'number') setRoomCredit(m.balance);
           const net = (m.settlements as any[]).reduce((s, x) => s + x.net, 0);
           setLastSettle(net);
           setMySettlements(m.settlements);
@@ -114,6 +127,7 @@ export function TablePage() {
           break;
         }
         case 'error':
+          if (/满房|上锁|密码|已关闭|VIP/.test(m.message) && !table) { setBlocked(m.message); break; }
           flash(m.message);
           setPending({}); history.current = [];
           break;
@@ -135,12 +149,14 @@ export function TablePage() {
   const total = (b: Bets) => Object.values(b).reduce((s, v) => s + (v ?? 0), 0);
 
   // 可用余额 = 账户余额（已确认注码已扣） - 待确认注码
-  const available = Math.max(0, (user?.balance ?? 0) - total(pending));
+  // 私人房只能用房主给的私房积分下注；大厅积分在私房里不可用
+  const spendable = roomCredit !== null ? roomCredit : (user?.balance ?? 0);
+  const available = Math.max(0, spendable - total(pending));
   const pendingAllIn = total(pending) > 0 && available <= 0;
 
   const addChip = (t: BetType) => {
     if (!betting) return;
-    if (available <= 0) { flash(total(pending) > 0 ? '已梭哈：筹码全部压上' : '余额不足'); native.vibrate(); return; }
+    if (available <= 0) { flash(total(pending) > 0 ? '已梭哈：筹码全部压上' : roomCredit !== null ? '私房积分不足，请找房主上分' : '余额不足'); native.vibrate(); return; }
     const add = Math.min(chip, available);   // 不够一枚筹码 → 剩多少压多少（梭哈）
     if (add < chip) flash(`余额不足一枚筹码，已压上剩余 $${add.toLocaleString()}（梭哈）`);
     // 筹码从筹码栏飞到投注区，落地后再计入待确认注码
@@ -239,6 +255,14 @@ export function TablePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showResult]);
 
+  if (blocked) return (
+    <div className="center blocked">
+      <div className="blocked-box">
+        <b>{blocked}</b>
+        <Link to="/" className="primary link-btn">返回大厅</Link>
+      </div>
+    </div>
+  );
   if (!table) return <div className="center muted">连接牌桌…</div>;
 
   /**
@@ -301,10 +325,13 @@ export function TablePage() {
     <div className={`table-page ${table.kind} ${orientation} ${wide ? 'wide' : ''} ${paidOut ? 'paid-out' : ''}`}>
       <header className="topbar">
         <Link to="/" className="ghost">‹ 返回大厅</Link>
-        <div className="brand">{table.name}</div>
+        <div className="brand">{room ? <span className="room-badge">密码房</span> : null}{table.name}</div>
         <div className="userbar">
           <span>{user?.nickname}</span>
-          <span className="balance">$ {user?.balance.toLocaleString()}</span>
+          {roomCredit !== null
+            ? <span className="balance" title="本房私房积分（房主给的），大厅积分不能在私房使用">私房 $ {roomCredit.toLocaleString()}</span>
+            : <span className="balance">$ {user?.balance.toLocaleString()}</span>}
+          {room && <button className="ghost room-btn" onClick={() => setRoomPanel(true)}>{room.isOwner ? '房间管理' : '房间'}{room.locked ? ' 🔒' : ''}</button>}
           <button className={`ghost sound ${soundOn ? '' : 'off'}`} title="音效开关" onClick={() => setSoundOn(sound.toggle())}>{soundOn ? '音效' : '静音'}</button>
           <button className="ghost rotate" title="切换横竖屏" onClick={() => setOrientation(landscape ? 'portrait' : 'landscape')}>切屏</button>
         </div>
@@ -346,6 +373,7 @@ export function TablePage() {
       <div className={`bet-area ${betting ? 'open' : 'closed'}`}>
         <button className="help-btn" title="玩法说明" onClick={() => setHelp(true)}>?</button>
         {help && <BetHelp payouts={table.payouts} onClose={() => setHelp(false)} />}
+        {roomPanel && room && <RoomPanel room={room} onClose={() => setRoomPanel(false)} onRoomChange={setRoom} onBalance={(b, credit) => { setUser(user ? { ...user, balance: b } : user); if (typeof credit === 'number') setRoomCredit(credit); }} />}
         <div className="bet-grid">
           <div className="side-row">
             {SIDE.slice(0, 3).map((t) => <BetSpot key={t} t={t} table={table} confirmed={confirmed[t]} pending={pending[t]} others={others[t]} allIn={pendingAllIn || myAllIn} onClick={() => addChip(t)} disabled={!betting} />)}

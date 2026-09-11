@@ -1,4 +1,4 @@
-import type { Bets, Hall, TableSnapshot, User } from './protocol';
+import type { RoomInfo, RoomMember, Bets, Hall, TableSnapshot, User } from './protocol';
 import { native } from './native';
 
 /** token 内存缓存；持久化走 native 桥（App 内 Keychain/Keystore，浏览器里 localStorage） */
@@ -36,7 +36,18 @@ export const api = {
   me: () => req<{ user: User }>('GET', '/me'),
   deposit: (amount: number) => req<{ balance: number }>('POST', '/me/deposit', { amount }),
   halls: () => req<{ halls: Hall[] }>('GET', '/halls'),
-  table: (id: string) => req<{ table: TableSnapshot; myBets: Bets }>('GET', `/tables/${id}`),
+  table: (id: string) => req<{ table: TableSnapshot; myBets: Bets; room?: RoomInfo | null }>('GET', `/tables/${id}`),
+  // 私人房间
+  myRooms: () => req<{ items: RoomInfo[] }>('GET', '/rooms/mine'),
+  createRoom: (body: { name?: string; password: string; minBet?: number; maxBet?: number; maxSideBet?: number }) => req<RoomInfo>('POST', '/rooms', body),
+  joinRoom: (password: string) => req<RoomInfo>('POST', '/rooms/join', { password }),
+  room: (id: string) => req<RoomInfo>('GET', `/rooms/${id}`),
+  roomMembers: (id: string) => req<{ items: RoomMember[] }>('GET', `/rooms/${id}/members`),
+  updateRoom: (id: string, patch: Record<string, unknown>) => req<RoomInfo>('PATCH', `/rooms/${id}`, patch),
+  roomTransfer: (id: string, userId: number, amount: number, note?: string) => req<{ ownerBalance: number; memberBalance: number }>('POST', `/rooms/${id}/transfer`, { userId, amount, note }),
+  kickMember: (id: string, userId: number) => req('DELETE', `/rooms/${id}/members/${userId}`),
+  closeRoom: (id: string) => req('DELETE', `/rooms/${id}`),
+  roomLedgerUrl: (id: string) => `/api/rooms/${id}/ledger.csv?token=${encodeURIComponent(auth.token ?? '')}`,
   myBets: () => req<{ items: any[] }>('GET', '/me/bets'),
 };
 
@@ -62,4 +73,6 @@ export const admin = {
   tables: () => req<{ halls: any[]; items: any[] }>('GET', '/admin/tables'),
   updateTable: (id: string, patch: Record<string, number | undefined>) => req<any>('PATCH', `/admin/tables/${id}`, patch),
   applyHall: (from: string, hallId: string) => req<{ updated: number }>('POST', '/admin/tables/apply-hall', { from, hallId }),
+  rooms: () => req<{ active: number; total: number; items: any[] }>('GET', '/admin/rooms'),
+  roomMembers: (id: string) => req<{ items: RoomMember[] }>('GET', `/admin/rooms/${id}/members`),
 };

@@ -42,8 +42,8 @@ export class TableManager {
     return h;
   }
 
-  addTable(cfg: ConstructorParameters<typeof BaccaratTable>[0]): BaccaratTable {
-    const t = new BaccaratTable(cfg, this.wallet, this.store);
+  addTable(cfg: ConstructorParameters<typeof BaccaratTable>[0], wallet: WalletPort = this.wallet): BaccaratTable {
+    const t = new BaccaratTable(cfg, wallet, this.store);
     this.tables.set(t.cfg.id, t);
     this.halls.find((h) => h.id === cfg.hallId)?.tableIds.push(t.cfg.id);
     return t;
@@ -51,7 +51,7 @@ export class TableManager {
 
   get(id: string): BaccaratTable {
     const t = this.tables.get(id);
-    if (!t) throw new Error(`table ${id} not found`);
+    if (!t) throw new Error(`牌桌不存在 / table ${id} not found`);
     return t;
   }
 

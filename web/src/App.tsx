@@ -31,7 +31,8 @@ function Shell() {
 
   // 结算推送 → 更新余额
   useEffect(() => socket.on((m) => {
-    if ((m.type === 'settled' || m.type === 'bet:ok') && typeof m.balance === 'number')
+    // 私人房的回执 balance 是房主名下的私房积分，不覆盖大厅积分（由 TablePage 单独维护）
+    if ((m.type === 'settled' || m.type === 'bet:ok') && typeof m.balance === 'number' && m.walletKind !== 'room')
       setUser((u) => (u ? { ...u, balance: m.balance } : u));
   }), []);
 

@@ -983,3 +983,48 @@ html, body { overscroll-behavior: none; }
 .table-page.portrait .lm-name { display: inline; color: rgba(255,255,255,.6); font-weight: 700; }
 .table-page.portrait .topbar { flex-wrap: nowrap; gap: 8px; }
 .table-page.portrait .userbar { gap: 6px; }
+.new-group { display: inline-flex; gap: 6px; align-items: center; }
+.new-group input { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--gold); background: var(--bg); color: var(--text); font: inherit; width: 160px; }
+button.danger { color: #ffb4b4; border-color: rgba(255,120,120,.5); }
+
+/* ---------- 私人房间 ---------- */
+.hall-tabs button.rooms.active { background: #1f2d1f; }
+.rooms-hall .room-join { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.rooms-hall .room-join input, .room-create input { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; font-size: 16px; letter-spacing: 2px; width: 200px; max-width: 100%; }
+.room-create { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.room-create label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.room-create label input { width: 110px; letter-spacing: 0; font-size: 14px; padding: 6px 8px; }
+.rooms-sub { margin: 14px 0 8px; }
+.room-card .gold { color: var(--gold); }
+.tc-foot .full { color: #ff8a8a; font-weight: 700; }
+.room-badge { display: inline-block; background: #1f5a33; color: #8ff0a8; font-size: 11px; padding: 1px 6px; border-radius: 4px; margin-right: 6px; vertical-align: middle; }
+.userbar button.room-btn { padding: 4px 8px; font-size: 12px; color: var(--gold); border-color: rgba(212,175,55,.6); }
+.room-dialog { width: min(760px, 100%); }
+.room-body { padding: 8px 12px 12px; }
+.room-owner { display: grid; gap: 8px; margin-bottom: 10px; padding: 10px; background: rgba(212,175,55,.06); border: 1px dashed rgba(212,175,55,.35); border-radius: 8px; }
+.room-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.room-row input { width: 92px; padding: 4px 6px; font-size: 13px; }
+.room-row .grow { flex: 1; }
+.room-pwd { font-size: 18px; letter-spacing: 3px; color: var(--gold); }
+.small-btn { padding: 4px 10px; font-size: 12px; }
+.link-btn { display: inline-block; text-decoration: none; }
+button.danger, .small-btn.danger { color: #ffb4b4; border-color: rgba(255,120,120,.5); }
+.room-members td, .room-members th { font-size: 12px; padding: 5px 6px; }
+.room-members tr.owner td { background: rgba(212,175,55,.08); }
+.gold-tag { background: #3b2f0d; color: var(--gold); margin-left: 4px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #555; margin-right: 4px; }
+.dot.on { background: #2a9d4f; box-shadow: 0 0 6px #2a9d4f; }
+.adjust-inline { display: inline-flex; gap: 4px; align-items: center; }
+.adjust-inline input { width: 80px; padding: 3px 6px; font-size: 12px; }
+.room-actions { white-space: nowrap; }
+.room-note { padding-top: 8px; line-height: 1.5; }
+.blocked { min-height: 100%; display: grid; place-items: center; padding: 24px; }
+.blocked-box { display: grid; gap: 14px; justify-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 24px 32px; font-size: 16px; }
+.blocked-box .link-btn { padding: 8px 20px; border-radius: 8px; background: var(--gold); color: #1a1400; font-weight: 700; }
+@media (max-width: 640px) { .room-dialog { width: 100%; } .room-members th:nth-child(5), .room-members td:nth-child(5) { display: none; } }
+@media (max-width: 640px) {
+  .room-members th:nth-child(6), .room-members td:nth-child(6) { display: none; }
+  .room-members td:nth-child(2) { font-size: 0; }   /* 手机上只留在线状态点 */
+  .room-members td:nth-child(2) .dot { margin: 0; }
+  .room-row input { width: 76px; }
+}

@@ -25,7 +25,7 @@ export function AdminPage() {
   const [list, setList] = useState<{ total: number; items: any[] }>({ total: 0, items: [] });
   const [selected, setSelected] = useState<number | null>(null);
   const [err, setErr] = useState('');
-  const [view, setView] = useState<'players' | 'tables'>('players');
+  const [view, setView] = useState<'players' | 'tables' | 'rooms'>('players');
 
   const loadGroups = useCallback(() => admin.groups().then((r) => setGroups(r.items)).catch((e) => setErr(e.message)), []);
   const loadList = useCallback(() => {
@@ -43,11 +43,16 @@ export function AdminPage() {
     </th>
   );
 
+  // 新建组别：用内嵌输入框（App 的 WebView 里 prompt() 会被静默吞掉）
+  const [newGroup, setNewGroup] = useState<string | null>(null);
   const addGroup = async () => {
-    const name = prompt('新组别名称');
+    const name = (newGroup ?? '').trim();
     if (!name) return;
-    await admin.createGroup(name).catch((e) => setErr(e.message));
-    loadGroups();
+    try { await admin.createGroup(name); setNewGroup(null); loadGroups(); } catch (e: any) { setErr(e.message); }
+  };
+  const removeGroup = async (g: any) => {
+    if (!confirm(`删除组别「${g.name}」？组内玩家会变成未分组。`)) return;
+    try { await admin.deleteGroup(g.id); loadGroups(); loadList(); } catch (e: any) { setErr(e.message); }
   };
 
   const pages = Math.max(1, Math.ceil(list.total / 50));
@@ -60,11 +65,13 @@ export function AdminPage() {
         <div className="hall-tabs">
           <button className={view === 'players' ? 'active' : ''} onClick={() => setView('players')}>玩家</button>
           <button className={view === 'tables' ? 'active' : ''} onClick={() => setView('tables')}>牌桌设置</button>
+          <button className={view === 'rooms' ? 'active' : ''} onClick={() => setView('rooms')}>私人房间{summary?.roomsActive ? `（${summary.roomsActive}）` : ''}</button>
         </div>
         <div className="userbar"><span>{user?.nickname}</span><button className="ghost" onClick={logout}>退出</button></div>
       </header>
 
       {view === 'tables' && <TableSettings onError={setErr} />}
+      {view === 'rooms' && <RoomsAdmin onError={setErr} />}
       {view === 'tables' && err && <div className="error" onClick={() => setErr('')}>{err}</div>}
       {view === 'players' && <>
 
@@ -76,6 +83,7 @@ export function AdminPage() {
           <Stat label="今日玩家输赢" value={fmtSigned(summary.playerNetToday)} tone={cls(summary.playerNetToday)} sub="正数=玩家赢" />
           <Stat label="今日上分 / 下分" value={`${fmtMoney(summary.depositToday)} / ${fmtMoney(summary.withdrawToday)}`} />
           <Stat label="玩家余额合计" value={fmtMoney(summary.totalBalance)} />
+          <Stat label="私人房间" value={summary.roomsActive ?? 0} sub={`今日私房流水 ${fmtMoney(summary.wageredPrivateToday ?? 0)}`} />
         </div>
       )}
       {err && <div className="error" onClick={() => setErr('')}>{err}</div>}
@@ -87,7 +95,14 @@ export function AdminPage() {
           <option value="0">未分组</option>
           {groups.map((g) => <option key={g.id} value={g.id}>{g.name}（{g.members}）</option>)}
         </select>
-        <button className="ghost" onClick={addGroup}>+ 新建组别</button>
+        {newGroup === null
+          ? <button className="ghost" onClick={() => setNewGroup('')}>+ 新建组别</button>
+          : <span className="new-group">
+              <input autoFocus placeholder="组别名称，如：代理A" value={newGroup} onChange={(e) => setNewGroup(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') addGroup(); if (e.key === 'Escape') setNewGroup(null); }} />
+              <button className="primary" onClick={addGroup} disabled={!newGroup.trim()}>创建</button>
+              <button className="ghost" onClick={() => setNewGroup(null)}>取消</button>
+            </span>}
+        {filters.group && Number(filters.group) > 0 && <button className="ghost danger" onClick={() => removeGroup(groups.find((g) => String(g.id) === filters.group))}>删除当前组</button>}
         <select value={filters.status} onChange={(e) => setF({ status: e.target.value })}>
           <option value="">全部状态</option><option value="active">正常</option><option value="frozen">已冻结</option>
         </select>
@@ -108,7 +123,7 @@ export function AdminPage() {
             {list.items.map((p) => (
               <tr key={p.id} className={selected === p.id ? 'sel' : ''} onClick={() => setSelected(p.id)}>
                 <td>{p.id}</td>
-                <td><span className={`dot ${p.online ? 'on' : ''}`} />{p.nickname} <span className="muted small">{p.username} · VIP{p.vipLevel}</span></td>
+                <td><span className={`dot ${p.online ? 'on' : ''}`} />{p.nickname} <span className="muted small">{p.username} · VIP{p.vipLevel}{p.canHost ? ` · 房主(${p.maxRooms})` : ''}</span></td>
                 <td>{p.groupName ?? <span className="muted">—</span>}</td>
                 <td>{p.status === 'frozen' ? <span className="tag frozen">冻结</span> : <span className="tag ok">正常</span>}</td>
                 <td className="num gold">{fmtMoney(p.balance)}</td>
@@ -212,6 +227,19 @@ function PlayerDrawer({ id, groups, onClose, onChanged }: { id: number; groups: 
             {[0, 1, 2, 3, 4, 5].map((v) => <option key={v} value={v}>VIP{v}</option>)}
           </select>
         </label>
+        <label>房主权限
+          <select value={p.canHost ? '1' : '0'} onChange={(e) => patch({ canHost: e.target.value === '1', ...(e.target.value === '1' && !p.maxRooms ? { maxRooms: 3 } : {}) })}>
+            <option value="0">无</option>
+            <option value="1">可开私人房</option>
+          </select>
+        </label>
+        {p.canHost && (
+          <label>最多开房
+            <select value={p.maxRooms ?? 0} onChange={(e) => patch({ maxRooms: Number(e.target.value) })}>
+              {[1, 2, 3, 5, 10, 20, 50].map((v) => <option key={v} value={v}>{v} 间</option>)}
+            </select>
+          </label>
+        )}
         <button className={p.status === 'frozen' ? 'primary' : 'ghost danger'} onClick={() => patch({ status: p.status === 'frozen' ? 'active' : 'frozen' })}>
           {p.status === 'frozen' ? '解冻账号' : '冻结账号'}
         </button>
@@ -230,8 +258,11 @@ function PlayerDrawer({ id, groups, onClose, onChanged }: { id: number; groups: 
         <div className="drawer-body">
           <div className="kv-grid">
             <Kv k="当前余额" v={fmtMoney(p.balance)} tone="gold" />
-            <Kv k="总流水" v={fmtMoney(s.wagered)} />
-            <Kv k="总输赢" v={fmtSigned(s.net)} tone={cls(s.net)} />
+            <Kv k="总流水" v={fmtMoney(s.wagered)} sub={`正常房 ${fmtMoney(s.wageredPublic ?? 0)} · 私房 ${fmtMoney(s.wageredPrivate ?? 0)}`} />
+            <Kv k="总输赢" v={fmtSigned(s.net)} tone={cls(s.net)} sub={`正常房 ${fmtSigned(s.netPublic ?? 0)} · 私房 ${fmtSigned(s.netPrivate ?? 0)}`} />
+            <Kv k="私房局数 / 注数" v={`${s.roundsPrivate ?? 0} / ${s.betsPrivate ?? 0}`} sub={`收到上分 ${fmtMoney(s.roomTransferIn ?? 0)} · 被下分 ${fmtMoney(s.roomTransferOut ?? 0)}`} />
+            <Kv k="私房积分合计" v={fmtMoney(s.creditTotal ?? 0)} sub={(data.credits ?? []).map((c: any) => `${c.ownerName} ${fmtMoney(c.balance)}`).join(' · ') || '无'} />
+            <Kv k="作为房主发出 / 收回" v={`${fmtMoney(s.roomGiven ?? 0)} / ${fmtMoney(s.roomTaken ?? 0)}`} sub="大厅积分 ↔ 成员私房积分" />
             <Kv k="累计上分" v={fmtMoney(s.deposits)} sub={`${s.depositCount} 次`} />
             <Kv k="累计下分" v={fmtMoney(s.withdraws)} sub={`${s.withdrawCount} 次`} />
             <Kv k="上下分净额" v={fmtSigned(s.netDepositFlow)} sub="上分 − 下分" />
@@ -394,6 +425,57 @@ function TableSettings({ onError }: { onError: (m: string) => void }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+
+/** 后台：私人房间列表（数量、状态、房主、成员、流水、输赢）+ 成员明细 */
+function RoomsAdmin({ onError }: { onError: (m: string) => void }) {
+  const [data, setData] = useState<{ active: number; total: number; items: any[] } | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  const [members, setMembers] = useState<any[]>([]);
+  const load = useCallback(() => admin.rooms().then(setData).catch((e) => onError(e.message)), [onError]);
+  useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t); }, [load]);
+  useEffect(() => { if (open) admin.roomMembers(open).then((r) => setMembers(r.items)).catch((e) => onError(e.message)); }, [open, onError]);
+  if (!data) return <div className="center muted">加载中…</div>;
+  return (
+    <div className="table-settings">
+      <div className="muted small" style={{ padding: '8px 16px' }}>活跃 {data.active} 间 · 历史共 {data.total} 间。私人房的下注、流水、输赢与正常房分开统计（玩家详情里也分列）。</div>
+      <div className="table-wrap">
+        <table className="tbl">
+          <thead><tr><th>房间</th><th>房主</th><th>状态</th><th>阶段</th><th>成员 / 在线</th><th>限红</th><th>局数</th><th>流水</th><th>玩家输赢</th><th>创建时间</th><th></th></tr></thead>
+          <tbody>
+            {data.items.map((r) => (
+              <tr key={r.id} className={r.status !== 'active' ? 'muted' : ''}>
+                <td><b>{r.name}</b><div className="muted small">{r.id}{r.status === 'active' ? ` · 密码 ${r.password}` : ''}</div></td>
+                <td>{r.owner_name}</td>
+                <td>{r.status === 'active' ? <span className="tag ok">{r.locked ? '已上锁' : '开放'}</span> : <span className="tag frozen">已关闭</span>}</td>
+                <td><span className={`phase ${r.phase}`}>{r.phase}</span></td>
+                <td>{r.members} / {r.online} 在线</td>
+                <td>{fmtMoney(r.min_bet)} – {fmtMoney(r.max_bet)}</td>
+                <td>{r.rounds}</td>
+                <td>{fmtMoney(r.wagered)}</td>
+                <td className={cls(r.playerNet)}>{fmtSigned(r.playerNet)}</td>
+                <td className="muted small">{fmtTime(r.created_at)}</td>
+                <td><button className="ghost" onClick={() => setOpen(open === r.id ? null : r.id)}>{open === r.id ? '收起' : '成员'}</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {open && (
+        <div className="table-wrap" style={{ marginTop: 10 }}>
+          <table className="tbl">
+            <thead><tr><th>成员</th><th>账号</th><th>余额</th><th>本房流水</th><th>本房输赢</th><th>局数</th><th>房主上分</th><th>房主下分</th><th>加入时间</th></tr></thead>
+            <tbody>
+              {members.map((m) => (
+                <tr key={m.userId}><td>{m.nickname}{m.isOwner ? '（房主）' : ''}</td><td>{m.username}</td><td>{fmtMoney(m.balance)}</td><td>{fmtMoney(m.wagered)}</td><td className={cls(m.net)}>{fmtSigned(m.net)}</td><td>{m.rounds}</td><td>{fmtMoney(m.up)}</td><td>{fmtMoney(m.down)}</td><td className="muted small">{fmtTime(m.joinedAt)}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

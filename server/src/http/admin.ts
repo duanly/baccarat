@@ -18,8 +18,9 @@ import { AuthService, HttpError } from '../auth.js';
 import type { Wallet } from '../wallet.js';
 import type { Presence } from '../presence.js';
 import type { TableManager } from '../game/manager.js';
+import type { RoomService } from '../rooms.js';
 
-interface Deps { db: DB; auth: AuthService; wallet: Wallet; presence: Presence; tables: TableManager }
+interface Deps { db: DB; auth: AuthService; wallet: Wallet; presence: Presence; tables: TableManager; rooms: RoomService }
 
 export function adminRouter(d: Deps): Router {
   const r = Router();
@@ -41,10 +42,22 @@ export function adminRouter(d: Deps): Router {
         (SELECT COALESCE(SUM(net),0) FROM bets WHERE created_at >= ?) AS playerNetToday,
         (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE kind='deposit' AND created_at >= ?) AS depositToday,
         (SELECT COALESCE(-SUM(amount),0) FROM transactions WHERE kind='withdraw' AND created_at >= ?) AS withdrawToday,
-        (SELECT COALESCE(SUM(balance),0) FROM users WHERE role = 'player') AS totalBalance`)
-      .get(today, today, today, today, today) as any;
+        (SELECT COALESCE(SUM(balance),0) FROM users WHERE role = 'player') AS totalBalance,
+        (SELECT COUNT(*) FROM rooms WHERE status = 'active') AS roomsActive,
+        (SELECT COALESCE(SUM(amount),0) FROM bets WHERE created_at >= ? AND table_id LIKE 'room-%') AS wageredPrivateToday`)
+      .get(today, today, today, today, today, today) as any;
     const online = [...d.presence.onlineIds()].filter((id) => (d.db.prepare('SELECT role FROM users WHERE id = ?').get(id) as any)?.role === 'player').length;
     res.json({ ...row, online });
+  });
+
+  // ---------- 私人房间 ----------
+  r.get('/rooms', (_req, res) => {
+    const items = d.rooms.adminList();
+    res.json({ active: items.filter((x) => x.status === 'active').length, total: items.length, items });
+  });
+  r.get('/rooms/:id/members', (req, res) => {
+    const room = d.rooms.row(req.params.id);
+    res.json({ items: d.rooms.members(req.params.id, room.owner_id) });
   });
 
   // ---------- 牌桌参数 ----------
@@ -135,16 +148,18 @@ export function adminRouter(d: Deps): Router {
     if (online) { where.push(onlineIds.size ? `u.id IN (${[...onlineIds].join(',')})` : '0'); }
 
     const base = `FROM users u
-      LEFT JOIN (SELECT user_id, SUM(amount) AS wagered, SUM(net) AS net, COUNT(*) AS betCount, COUNT(DISTINCT round_id) AS rounds, MAX(created_at) AS lastBetAt FROM bets GROUP BY user_id) b ON b.user_id = u.id
+      LEFT JOIN (SELECT user_id, SUM(amount) AS wagered, SUM(net) AS net, COUNT(*) AS betCount, COUNT(DISTINCT round_id) AS rounds, MAX(created_at) AS lastBetAt,
+                         SUM(CASE WHEN table_id LIKE 'room-%' THEN amount ELSE 0 END) AS wageredPrivate, SUM(CASE WHEN table_id LIKE 'room-%' THEN net ELSE 0 END) AS netPrivate FROM bets GROUP BY user_id) b ON b.user_id = u.id
       LEFT JOIN (SELECT user_id,
           SUM(CASE WHEN kind='deposit' THEN amount ELSE 0 END) AS deposits,
           SUM(CASE WHEN kind='withdraw' THEN -amount ELSE 0 END) AS withdraws FROM transactions GROUP BY user_id) t ON t.user_id = u.id
       LEFT JOIN groups g ON g.id = u.group_id
       WHERE ${where.join(' AND ')}`;
     const total = (d.db.prepare(`SELECT COUNT(*) AS n ${base}`).get(...args) as any).n;
-    const rows = d.db.prepare(`SELECT u.id, u.username, u.nickname, u.vip_level, u.balance, u.status, u.group_id, g.name AS group_name,
+    const rows = d.db.prepare(`SELECT u.id, u.username, u.nickname, u.vip_level, u.balance, u.status, u.group_id, g.name AS group_name, u.can_host, u.max_rooms,
         u.last_login_at, u.last_ip, u.last_device, u.total_online_ms, u.created_at,
         COALESCE(b.wagered,0) AS wagered, COALESCE(b.net,0) AS net, COALESCE(b.betCount,0) AS betCount, COALESCE(b.rounds,0) AS rounds, b.lastBetAt,
+        COALESCE(b.wageredPrivate,0) AS wageredPrivate, COALESCE(b.netPrivate,0) AS netPrivate,
         COALESCE(t.deposits,0) AS deposits, COALESCE(t.withdraws,0) AS withdraws
         ${base} ORDER BY ${sort} ${dir}, u.id DESC LIMIT ? OFFSET ?`).all(...args, size, (page - 1) * size) as any[];
     res.json({ total, page, size, items: rows.map((x) => decorate(x, d.presence)) });
@@ -165,6 +180,22 @@ export function adminRouter(d: Deps): Router {
         COALESCE(SUM(CASE WHEN kind='deposit' THEN 1 END),0) AS depositCount,
         COALESCE(SUM(CASE WHEN kind='withdraw' THEN 1 END),0) AS withdrawCount FROM transactions WHERE user_id = ?`).get(id) as any;
     const byType = d.db.prepare(`SELECT bet_type, COUNT(*) AS n, SUM(amount) AS wagered, SUM(net) AS net FROM bets WHERE user_id = ? GROUP BY bet_type ORDER BY wagered DESC`).all(id);
+    // 正常房 / 私人房分开统计
+    const split = d.db.prepare(`SELECT
+        COALESCE(SUM(CASE WHEN table_id LIKE 'room-%' THEN amount ELSE 0 END),0) AS wageredPrivate, COALESCE(SUM(CASE WHEN table_id LIKE 'room-%' THEN net ELSE 0 END),0) AS netPrivate,
+        COALESCE(SUM(CASE WHEN table_id LIKE 'room-%' THEN 1 ELSE 0 END),0) AS betsPrivate, COUNT(DISTINCT CASE WHEN table_id LIKE 'room-%' THEN round_id END) AS roundsPrivate,
+        COALESCE(SUM(CASE WHEN table_id NOT LIKE 'room-%' THEN amount ELSE 0 END),0) AS wageredPublic, COALESCE(SUM(CASE WHEN table_id NOT LIKE 'room-%' THEN net ELSE 0 END),0) AS netPublic,
+        COALESCE(SUM(CASE WHEN table_id NOT LIKE 'room-%' THEN 1 ELSE 0 END),0) AS betsPublic, COUNT(DISTINCT CASE WHEN table_id NOT LIKE 'room-%' THEN round_id END) AS roundsPublic
+        FROM bets WHERE user_id = ?`).get(id) as any;
+    // 私房积分：作为成员收到 / 退回的（owner_id 非空）；作为房主从大厅积分转出 / 收回的（owner_id 为空）
+    const roomTransfers = d.db.prepare(`SELECT
+        COALESCE(SUM(CASE WHEN owner_id IS NOT NULL AND amount > 0 THEN amount ELSE 0 END),0) AS inAmt,
+        COALESCE(SUM(CASE WHEN owner_id IS NOT NULL AND amount < 0 THEN -amount ELSE 0 END),0) AS outAmt,
+        COALESCE(SUM(CASE WHEN owner_id IS NULL AND amount < 0 THEN -amount ELSE 0 END),0) AS givenAmt,
+        COALESCE(SUM(CASE WHEN owner_id IS NULL AND amount > 0 THEN amount ELSE 0 END),0) AS takenAmt
+        FROM transactions WHERE user_id = ? AND kind = 'transfer'`).get(id) as any;
+    const creditTotal = (d.db.prepare('SELECT COALESCE(SUM(balance),0) AS n FROM room_credits WHERE user_id = ?').get(id) as any).n;
+    const credits = d.db.prepare('SELECT c.owner_id AS ownerId, u.nickname AS ownerName, c.balance FROM room_credits c JOIN users u ON u.id = c.owner_id WHERE c.user_id = ? AND c.balance <> 0 ORDER BY c.balance DESC').all(id);
     const daily = d.db.prepare(`SELECT date(created_at/1000, 'unixepoch', 'localtime') AS day, COUNT(*) AS bets, SUM(amount) AS wagered, SUM(net) AS net
         FROM bets WHERE user_id = ? GROUP BY day ORDER BY day DESC LIMIT 30`).all(id);
     const onlineMs = u.total_online_ms + d.presence.liveMs(id);
@@ -181,7 +212,9 @@ export function adminRouter(d: Deps): Router {
         activeDays,
         onlineMs,
         netDepositFlow: round2(t.deposits - t.withdraws),   // 上下分净额
+        ...split, roomTransferIn: roomTransfers.inAmt, roomTransferOut: roomTransfers.outAmt, roomGiven: roomTransfers.givenAmt, roomTaken: roomTransfers.takenAmt, creditTotal,
       },
+      credits,
       byType, daily,
       current: d.presence.current(id) ?? null,
     });
@@ -189,14 +222,17 @@ export function adminRouter(d: Deps): Router {
 
   r.patch('/players/:id', (req, res) => {
     const id = Number(req.params.id);
-    const { groupId, vipLevel, status, nickname } = req.body ?? {};
+    const { groupId, vipLevel, status, nickname, canHost, maxRooms } = req.body ?? {};
+    if (maxRooms !== undefined && !(Number(maxRooms) >= 0 && Number(maxRooms) <= 50)) throw new HttpError(400, '最大开房数需在 0–50 之间');
     if (status && !['active', 'frozen'].includes(status)) throw new HttpError(400, 'status 无效');
     d.db.prepare(`UPDATE users SET
         group_id = CASE WHEN ? THEN ? ELSE group_id END,
         vip_level = COALESCE(?, vip_level),
         status = COALESCE(?, status),
-        nickname = COALESCE(?, nickname) WHERE id = ?`)
-      .run(groupId !== undefined ? 1 : 0, groupId ?? null, vipLevel ?? null, status ?? null, nickname ?? null, id);
+        nickname = COALESCE(?, nickname),
+        can_host = COALESCE(?, can_host),
+        max_rooms = COALESCE(?, max_rooms) WHERE id = ?`)
+      .run(groupId !== undefined ? 1 : 0, groupId ?? null, vipLevel ?? null, status ?? null, nickname ?? null, canHost === undefined ? null : (canHost ? 1 : 0), maxRooms === undefined ? null : Number(maxRooms), id);
     res.json({ player: decorate(d.db.prepare('SELECT u.*, g.name AS group_name FROM users u LEFT JOIN groups g ON g.id=u.group_id WHERE u.id = ?').get(id), d.presence) });
   });
 
@@ -245,10 +281,12 @@ function decorate(u: any, presence: Presence) {
   const online = presence.isOnline(u.id);
   return {
     id: u.id, username: u.username, nickname: u.nickname, vipLevel: u.vip_level, balance: u.balance, status: u.status,
+    canHost: !!u.can_host, maxRooms: u.max_rooms ?? 0,
     groupId: u.group_id ?? null, groupName: u.group_name ?? null,
     lastLoginAt: u.last_login_at ?? null, lastIp: u.last_ip ?? null, lastDevice: u.last_device ?? null,
     totalOnlineMs: (u.total_online_ms ?? 0) + presence.liveMs(u.id), createdAt: u.created_at, online,
     wagered: u.wagered ?? 0, net: u.net ?? 0, betCount: u.betCount ?? 0, rounds: u.rounds ?? 0, lastBetAt: u.lastBetAt ?? null,
+    wageredPrivate: u.wageredPrivate ?? 0, netPrivate: u.netPrivate ?? 0,
     deposits: u.deposits ?? 0, withdraws: u.withdraws ?? 0,
     avgBet: u.betCount ? round2(u.wagered / u.betCount) : 0,
   };

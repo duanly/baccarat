@@ -10,6 +10,9 @@ export interface User {
   username: string;
   nickname: string;
   vipLevel: number;
+  /** 房主权限：可创建私人房间；maxRooms = 最多同时开几间 */
+  canHost: boolean;
+  maxRooms: number;
   balance: number;
   role: 'player' | 'dealer' | 'admin';
   groupId: number | null;
@@ -112,6 +115,8 @@ export function rowToUser(row: any): User {
     username: row.username,
     nickname: row.nickname,
     vipLevel: row.vip_level,
+    canHost: !!row.can_host,
+    maxRooms: row.max_rooms ?? 0,
     balance: row.balance,
     role: row.role,
     groupId: row.group_id ?? null,

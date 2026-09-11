@@ -35,7 +35,10 @@ interface Client {
   ua: string;
 }
 
-export function attachWs(server: Server, auth: AuthService, tables: TableManager, presence: Presence) {
+/** 结算 / 下注回执里的 balance 属于哪套积分：私人房 = 房主名下私房积分，其它 = 大厅积分 */
+const walletKind = (t: { cfg: { hallId: string } }) => (t.cfg.hallId === 'private' ? 'room' : 'main');
+
+export function attachWs(server: Server, auth: AuthService, tables: TableManager, presence: Presence, rooms?: import('../rooms.js').RoomService) {
   const wss = new WebSocketServer({ server, path: '/ws' });
   const clients = new Set<Client>();
   const send = (ws: WebSocket, msg: unknown) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(msg));
@@ -54,7 +57,7 @@ export function attachWs(server: Server, auth: AuthService, tables: TableManager
     t.on('result', (e) => broadcast({ type: 'table:result', ...e }));
     t.on('bets', (e) => broadcast({ type: 'table:bets', ...e }));
     t.on('settled', (e) => {
-      for (const c of clients) if (c.user?.id === e.userId) send(c.ws, { type: 'settled', ...e });
+      for (const c of clients) if (c.user?.id === e.userId) send(c.ws, { type: 'settled', ...e, walletKind: walletKind(t) });
     });
   }
 
@@ -100,8 +103,12 @@ export function attachWs(server: Server, auth: AuthService, tables: TableManager
         const t = tables.get(msg.tableId);
         const hall = tables.hallOf(t.cfg.id);
         if (hall && (c.user?.vipLevel ?? 0) < hall.minVipLevel) throw new Error(`需要 VIP${hall.minVipLevel} 等级`);
+        if (t.cfg.hallId === 'private' && rooms && c.user) rooms.assertCanEnter(t.cfg.id, c.user.id);
+        if (c.user) {
+          try { t.join(c.user.id, c.user.nickname); }
+          catch (e: any) { if (e.message === 'FULL') throw new Error(`满房：该桌已有 ${t.cfg.capacity} 人`); throw e; }
+        }
         c.subs.add(t.cfg.id);
-        if (c.user) t.join(c.user.id, c.user.nickname);
         return send(c.ws, { type: 'table:state', table: t.snapshot(), myBets: c.user ? t.getBets(c.user.id) : {} });
       }
       case 'unsubscribe': {
@@ -113,18 +120,18 @@ export function attachWs(server: Server, auth: AuthService, tables: TableManager
         if (!c.user) throw new Error('未登录');
         const t = tables.get(msg.tableId);
         const r = t.placeBets(c.user.id, c.user.nickname, msg.bets ?? {});
-        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, ...r });
+        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, ...r, walletKind: walletKind(t) });
       }
       case 'clearBet': {
         if (!c.user) throw new Error('未登录');
         const t = tables.get(msg.tableId);
         const r = t.clearBet(c.user.id, msg.betType);
-        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, bets: r.bets, balance: r.balance });
+        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, bets: r.bets, balance: r.balance, walletKind: walletKind(t) });
       }
       case 'clearBets': {
         if (!c.user) throw new Error('未登录');
         const t = tables.get(msg.tableId);
-        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, bets: {}, balance: t.clearBets(c.user.id) });
+        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, bets: {}, balance: t.clearBets(c.user.id), walletKind: walletKind(t) });
       }
       default:
         throw new Error(`unknown message type ${msg.type}`);
