@@ -28,6 +28,7 @@ export function TablePage() {
   const [table, setTable] = useState<TableSnapshot | null>(null);
   const [confirmed, setConfirmed] = useState<Bets>({});   // 服务端已接受的本局注码
   const [pending, setPending] = useState<Bets>({});       // 本地待提交
+  const history = useRef<{ t: BetType; add: number }[]>([]); // 待确认注码的放置顺序（撤注用）
   const [chip, setChip] = useState(100);
   // 本桌筹码面额：随限红变化；进桌 / 限红改动时默认选中第二小的一枚
   const CHIPS = useMemo(() => chipSetFor(table?.limits.minBet ?? 10, table?.limits.maxBet ?? 5000), [table?.limits.minBet, table?.limits.maxBet]);
@@ -68,7 +69,7 @@ export function TablePage() {
           setTable((prev) => {
             kindRef.current = m.table.kind;
             if (m.myBets) setConfirmed(m.myBets);
-            else if (prev && prev.roundId !== m.table.roundId) { setConfirmed({}); setPending({}); setMyAllIn(false); } // 新一局：清空注码
+            else if (prev && prev.roundId !== m.table.roundId) { setConfirmed({}); setPending({}); setMyAllIn(false); history.current = []; } // 新一局：清空注码
             if (!prev || prev.roundId !== m.table.roundId) {
               setOverlay(false); setPaidOut(false); setMySettlements(null); setCleared(false); payoutDone.current = false;
               // 新一局 / 首次进桌：已有的牌视为已落桌；咪牌记录清空
@@ -109,7 +110,7 @@ export function TablePage() {
         }
         case 'error':
           flash(m.message);
-          setPending({});
+          setPending({}); history.current = [];
           break;
       }
     });
@@ -143,8 +144,9 @@ export function TablePage() {
     const to = centerOf(spot?.querySelector('.mine-wrap')) ?? centerOf(spot);
     if (from && to) {
       fly(makeChipNode(chip), from, to, { duration: 380, arc: 60, spin: 360, scaleFrom: 1.1, scaleTo: 0.75 })
-        .then(() => setPending((p) => ({ ...p, [t]: (p[t] ?? 0) + add })));
+        .then(() => { history.current.push({ t, add }); setPending((p) => ({ ...p, [t]: (p[t] ?? 0) + add })); });
     } else {
+      history.current.push({ t, add });
       setPending((p) => ({ ...p, [t]: (p[t] ?? 0) + add }));
     }
     native.vibrate();
@@ -153,19 +155,26 @@ export function TablePage() {
     if (!betting || available <= 0) return;
     // 一键梭哈：把剩余全部压到当前选中的第一个区域（默认庄）
     const target = (Object.keys(pending)[0] ?? Object.keys(confirmed)[0] ?? 'banker') as BetType;
+    history.current.push({ t: target, add: available });
     setPending((p) => ({ ...p, [target]: (p[target] ?? 0) + available }));
   };
-  const submit = () => { if (total(pending) > 0) socket.send({ type: 'bet', tableId: id, bets: pending }); };
-  const clearAll = () => {
+  const submit = () => { if (total(pending) > 0) { socket.send({ type: 'bet', tableId: id, bets: pending }); history.current = []; } };
+  /** 撤注：撤销最近放下的一枚筹码（筹码飞回筹码栏）；待确认注码都撤完后不再动已确认的注码 */
+  const undoLast = () => {
+    const last = history.current.pop();
+    if (!last) return;
     const tray = centerOf(document.querySelector('.chips .chip.sel'));
-    for (const [t, v] of Object.entries(shown)) {
-      const from = centerOf(document.querySelector(`.spot.${t} .mine-wrap`));
-      if (from && tray && v) representativeChips(v, 2).forEach((c, i) => fly(makeChipNode(c, 28), from, tray, { duration: 320, arc: 30, delay: i * 40, scaleTo: 0.6 }));
-    }
-    setPending({});
-    if (total(confirmed) > 0) socket.send({ type: 'clearBets', tableId: id });
+    const from = centerOf(document.querySelector(`.spot.${last.t} .mine-wrap`));
+    if (from && tray) fly(makeChipNode(last.add, 28), from, tray, { duration: 320, arc: 30, scaleTo: 0.6 });
+    setPending((p) => {
+      const v = (p[last.t] ?? 0) - last.add;
+      const n = { ...p };
+      if (v > 0) n[last.t] = v; else delete n[last.t];
+      return n;
+    });
+    native.vibrate();
   };
-  const rebet = () => { if (betting && lastBets) setPending(lastBets); };
+  const rebet = () => { if (betting && lastBets) { setPending(lastBets); history.current = Object.entries(lastBets).filter(([, v]) => v).map(([t, v]) => ({ t: t as BetType, add: v as number })); } };
   const [lastBets, setLastBets] = useState<Bets | null>(null);
   useEffect(() => { if (table?.phase === 'dealing' && total(confirmed) > 0) setLastBets(confirmed); }, [table?.phase]); // eslint-disable-line
 
@@ -344,7 +353,7 @@ export function TablePage() {
           {CHIPS.map((c) => <button key={c} className={`chip c${c} ${chip === c ? 'sel' : ''}`} onClick={() => setChip(c)}>{chipLabel(c)}</button>)}
           <div className="actions">
             <button onClick={rebet} disabled={!betting || !lastBets} className="ghost">重复</button>
-            <button onClick={clearAll} disabled={!betting || total(shown) === 0} className="ghost">清除</button>
+            <button onClick={undoLast} disabled={!betting || total(pending) === 0} className="ghost">撤注</button>
             <button onClick={submit} disabled={!betting || total(pending) === 0} className={`primary confirm ${total(pending) > 0 ? 'pulse' : ''} ${pendingAllIn ? 'allin' : ''}`}>
               {pendingAllIn ? `梭哈 $${total(pending).toLocaleString()}` : `确认 $${total(pending).toLocaleString()}`}
             </button>

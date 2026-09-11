@@ -887,3 +887,41 @@ html, body { overscroll-behavior: none; }
 .dealer-scene.dealing.to-player .shoe { transform: rotate(-10deg) translate(-6px, 3px); }
 .dealer-scene.dealing.to-banker .shoe { transform: rotate(10deg) translate(6px, 3px); }
 @media (max-width: 640px) { .shoe { width: 44px; margin-left: -22px; top: 8px; } }
+
+/* ---------- 竖屏：下注区缩小 20%，筹码与按钮做大 ---------- */
+.table-page.portrait .bet-grid { flex: 2.4 1 0; }
+.table-page.portrait .chips { flex: 1.6 1 0; gap: 4px; padding-top: 8px; }
+.table-page.portrait .chip { width: 46px; height: 46px; font-size: 13px; border-width: 3px; }
+@media (max-width: 360px) { .table-page.portrait .chip { width: 42px; height: 42px; } }
+.table-page.portrait .actions { margin-top: 6px; gap: 8px; }
+.table-page.portrait .actions button { height: 42px; font-size: 15px; padding: 0 8px; }
+
+/* ---------- 横屏：筹码 + 按钮一行放在牌桌下面，右列只剩下注区 ---------- */
+.table-page.landscape { grid-template-rows: auto minmax(0, 1fr) auto auto; }
+.table-page.landscape .scene { grid-row: 2; margin-bottom: 0; }
+.table-page.landscape .bet-area { display: contents; }
+.table-page.landscape .bet-grid { grid-column: 2; grid-row: 2 / 4; margin: 6px 0; min-height: 0; }
+.table-page.landscape .chips { grid-column: 1; grid-row: 3; display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; padding: 6px 2px 4px; overflow: visible; }
+.table-page.landscape .chip { flex: 0 0 auto; width: 44px; height: 44px; font-size: 13px; border-width: 3px; min-width: 0; }
+.table-page.landscape .actions { display: flex; flex: 1 1 auto; width: auto; margin: 0 0 0 auto; gap: 6px; justify-content: flex-end; min-width: 0; }
+.table-page.landscape .actions button, .table-page.landscape .actions button.confirm { height: 40px; font-size: 14px; padding: 0 10px; width: auto; flex: 0 1 auto; min-width: 0; }
+.table-page.landscape .actions button.confirm { flex: 0 1 auto; min-width: 104px; }
+.table-page.landscape .help-btn { position: absolute; top: calc(var(--top) + 8px); right: 10px; }
+.table-page.landscape .side { grid-row: 4; }
+.table-page.landscape .bet-hint { display: none; }
+@media (max-width: 700px) and (orientation: landscape) { .table-page.landscape .chip { width: 36px; height: 36px; font-size: 11px; } .table-page.landscape .actions button { font-size: 12px; padding: 0 6px; } }
+
+/* 牌盒点头方向修正：出口（底部）朝派牌一侧偏 */
+.dealer-scene.dealing.to-player .shoe { transform: rotate(12deg) translate(-4px, 3px); }
+.dealer-scene.dealing.to-banker .shoe { transform: rotate(-12deg) translate(4px, 3px); }
+.table-page.landscape { position: relative; }
+/* 横屏修正：筹码 + 按钮整行横跨左右两列（放在牌桌与下注区下面），第一屏 = 顶栏 + 牌桌/下注区 + 筹码行 */
+.table-page.landscape { --chips-h: 60px; grid-template-rows: auto calc(var(--vh) - var(--top) - var(--chips-h)) var(--chips-h) auto; }
+.table-page.landscape .scene { grid-row: 2; margin: 6px 0 0; }
+.table-page.landscape .bet-grid { grid-column: 2; grid-row: 2; margin: 6px 0 0; }
+.table-page.landscape .chips { grid-column: 1 / -1; grid-row: 3; padding: 8px 0 4px; }
+.table-page.landscape .chip { width: 44px; height: 44px; }
+.table-page.landscape .actions { margin-left: auto; gap: 8px; }
+.table-page.landscape .actions button, .table-page.landscape .actions button.confirm { height: 42px; font-size: 15px; padding: 0 16px; }
+.table-page.landscape .actions button.confirm { min-width: 150px; }
+.table-page.landscape .side { grid-row: 4; margin-top: 4px; }
