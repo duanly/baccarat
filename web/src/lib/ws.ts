@@ -1,5 +1,6 @@
 /** 单例 WebSocket 客户端：自动重连、重新鉴权、重新订阅 */
 import { auth, deviceLabel } from './api';
+import { syncClock } from './useCountdown';
 
 type Listener = (msg: any) => void;
 
@@ -23,6 +24,7 @@ class GameSocket {
     };
     ws.onmessage = (ev) => {
       const msg = JSON.parse(ev.data);
+      if (msg?.type === 'table:state' && msg.table?.serverTime) syncClock(msg.table.serverTime);
       for (const l of this.listeners) l(msg);
     };
     ws.onclose = () => {

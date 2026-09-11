@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import type { Hall, TableSummary, RoomInfo } from '../lib/protocol';
 import { BigRoad } from '../components/Roadmap';
 import { useSession } from '../App';
-import { useCountdown, PHASE_LABEL } from '../lib/useCountdown';
+import { useCountdown, PHASE_LABEL, syncClock } from '../lib/useCountdown';
 
 export function LobbyPage() {
   const { user, logout, setUser } = useSession();
@@ -14,7 +14,7 @@ export function LobbyPage() {
 
   useEffect(() => {
     let alive = true;
-    const load = () => api.halls().then((r) => alive && setHalls(r.halls)).catch((e) => setErr(e.message));
+    const load = () => api.halls().then((r) => { if (!alive) return; const st = (r.halls[0]?.tables[0] as any)?.serverTime; if (st) syncClock(st); setHalls(r.halls); }).catch((e) => setErr(e.message));
     load();
     const t = setInterval(load, 3000); // 大厅列表轮询；牌桌内改用 WebSocket
     return () => { alive = false; clearInterval(t); };

@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { TablePhase } from '../lib/protocol';
-import { useCountdown } from '../lib/useCountdown';
+import { useCountdown, serverNow } from '../lib/useCountdown';
 import { sound } from '../lib/sound';
 
 export function PhaseBanner({ phase, secs, roundId, nextRoundAt, countdownEndsAt }: { phase: TablePhase; secs: number; roundId: string | null; nextRoundAt: number | null; countdownEndsAt: number | null }) {
@@ -21,7 +21,7 @@ export function PhaseBanner({ phase, secs, roundId, nextRoundAt, countdownEndsAt
     if (phase === 'betting' && lastRound.current !== roundId) {
       lastRound.current = roundId;
       // 中途进桌且已到最后 5 秒：直接走倒计时，不再弹开始横幅（用服务端时间算，secs 这一帧还是旧值）
-      if (countdownEndsAt && countdownEndsAt - Date.now() <= 5000) return;
+      if (countdownEndsAt && countdownEndsAt - serverNow() <= 5000) return;
       setBanner('open');
       const t = setTimeout(() => setBanner(null), 1400);
       return () => clearTimeout(t);

@@ -497,7 +497,7 @@ export class BaccaratTable extends EventEmitter {
       id: this.cfg.id, name: this.cfg.name, kind: this.cfg.kind, hallId: this.cfg.hallId,
       phase: this.phase, roundNo: this.roundNo, countdownEndsAt: this.countdownEndsAt, nextRoundAt: this.nextRoundAt,
       limits: { minBet: this.cfg.minBet, maxBet: this.cfg.maxBet },
-      dealerName: this.cfg.dealerName, playersOnline: this.online.size, capacity: this.cfg.capacity, full: this.isFull,
+      dealerName: this.cfg.dealerName, playersOnline: this.online.size, capacity: this.cfg.capacity, full: this.isFull, serverTime: Date.now(),
       stats: s, recent: this.history.slice(-30), bigRoad: this.roadmap.bigRoad.slice(-12),
     };
   }
