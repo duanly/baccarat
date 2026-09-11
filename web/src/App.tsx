@@ -16,6 +16,7 @@ export const useSession = () => useContext(SessionCtx);
 function Shell() {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
+  const [notice, setNotice] = useState('');
   const nav = useNavigate();
 
   const refresh = async () => {
@@ -29,11 +30,20 @@ function Shell() {
     return native.onLifecycle((s) => { if (s === 'resumed') { socket.connect(); socket.reauth(); refresh(); } });
   }, []);
 
-  // 结算推送 → 更新余额
-  useEffect(() => socket.on((m) => {
-    if ((m.type === 'settled' || m.type === 'bet:ok') && typeof m.balance === 'number')
-      setUser((u) => (u ? { ...u, balance: m.balance } : u));
-  }), []);
+  // 结算 / 下注 / 后台上下分推送 → 更新余额
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const off = socket.on((m) => {
+      if ((m.type === 'settled' || m.type === 'bet:ok' || m.type === 'balance') && typeof m.balance === 'number')
+        setUser((u) => (u ? { ...u, balance: m.balance } : u));
+      if (m.type === 'balance' && typeof m.amount === 'number' && m.amount !== 0) {
+        const label = m.kind === 'transfer' ? (m.amount > 0 ? '房主上分' : '房主下分') : (m.amount > 0 ? '已充值' : '已扣款');
+        setNotice(`${label} ${m.amount > 0 ? '+' : ''}${m.amount.toLocaleString()}，余额 $ ${m.balance.toLocaleString()}`);
+        clearTimeout(timer); timer = setTimeout(() => setNotice(''), 4000);
+      }
+    });
+    return () => { off(); clearTimeout(timer); };
+  }, []);
 
   const logout = () => { auth.token = null; setUser(null); nav('/login'); };
 
@@ -47,6 +57,7 @@ function Shell() {
         <Route path="/admin/*" element={user?.role === 'admin' ? <AdminPage /> : <Navigate to="/" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
+      {notice && <div className="balance-notice" onClick={() => setNotice('')}>{notice}</div>}
     </SessionCtx.Provider>
   );
 }

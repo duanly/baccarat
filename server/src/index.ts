@@ -67,7 +67,7 @@ if (existsSync(webDist)) {
 app.use(errorHandler);
 
 const server = createServer(app);
-attachWs(server, auth, tables, presence, rooms);
+attachWs(server, auth, tables, presence, rooms, wallet);
 tables.startAll();
 rooms.restore();   // 恢复活跃的私人房间（各自独立的 RNG 牌桌）
 

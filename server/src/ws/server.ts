@@ -18,6 +18,7 @@
  *   { type: 'table:bets', tableId, leaderboard }        各玩家押注/输赢面板（已排序）
  *   { type: 'bet:ok', tableId, bets, balance }
  *   { type: 'settled', tableId, settlements, balance }  本人结算
+ *   { type: 'balance', balance, kind, amount }          后台/房主上下分后余额实时变动
  *   { type: 'error', message }
  */
 import { WebSocketServer, WebSocket } from 'ws';
@@ -26,6 +27,7 @@ import type { AuthService, User } from '../auth.js';
 import type { TableManager } from '../game/manager.js';
 import type { BaccaratTable } from '../game/table.js';
 import { clientIp, deviceFromUa, type Presence } from '../presence.js';
+import type { Wallet, BalanceChange } from '../wallet.js';
 
 interface Client {
   ws: WebSocket;
@@ -35,7 +37,7 @@ interface Client {
   ua: string;
 }
 
-export function attachWs(server: Server, auth: AuthService, tables: TableManager, presence: Presence, rooms?: import('../rooms.js').RoomService) {
+export function attachWs(server: Server, auth: AuthService, tables: TableManager, presence: Presence, rooms?: import('../rooms.js').RoomService, wallet?: Wallet) {
   const wss = new WebSocketServer({ server, path: '/ws' });
   const clients = new Set<Client>();
   const send = (ws: WebSocket, msg: unknown) => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(msg));
@@ -43,6 +45,10 @@ export function attachWs(server: Server, auth: AuthService, tables: TableManager
   // 牌桌事件 → 广播给订阅者
   for (const t of tables.tables.values()) wire(t);
   tables.onAdd(wire);   // 运行中创建的私人房间也要挂上广播
+  // 后台上下分 / 房主上下分 → 推给该玩家的所有连接，前端立即刷新余额
+  wallet?.on('change', (e: BalanceChange) => {
+    for (const c of clients) if (c.user?.id === e.userId) send(c.ws, { type: 'balance', balance: e.balance, kind: e.kind, amount: e.amount, note: e.note ?? '' });
+  });
 
   function wire(t: BaccaratTable) {
     const id = t.cfg.id;

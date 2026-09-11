@@ -1,12 +1,17 @@
 /** 钱包：余额扣减/入账 + 流水记录（同步 SQLite，天然串行，无并发扣款问题） */
+import { EventEmitter } from 'node:events';
 import type { DB } from './db/index.js';
 import { HttpError } from './auth.js';
 import { round2 } from './game/payouts.js';
 
 export type TxKind = 'deposit' | 'withdraw' | 'bet' | 'payout' | 'refund' | 'adjust' | 'transfer';   // transfer：私人房房主给成员上下分（房主与成员之间转账）
 
-export class Wallet {
-  constructor(private db: DB) {}
+/** 非牌局内的余额变动（后台上下分、房主上下分）：实时推给玩家 */
+export interface BalanceChange { userId: number; kind: TxKind; amount: number; balance: number; note?: string }
+const PUSH_KINDS: TxKind[] = ['deposit', 'withdraw', 'adjust', 'transfer'];
+
+export class Wallet extends EventEmitter {
+  constructor(private db: DB) { super(); }
 
   balance(userId: number): number {
     const row = this.db.prepare('SELECT balance FROM users WHERE id = ?').get(userId) as any;
@@ -29,6 +34,10 @@ export class Wallet {
     } catch (e) {
       this.db.exec('ROLLBACK');
       throw e;
+    }
+    if (PUSH_KINDS.includes(kind)) {
+      const ev: BalanceChange = { userId, kind, amount, balance: next, note: meta?.note };
+      try { this.emit('change', ev); } catch { /* 推送失败不影响入账 */ }
     }
     return next;
   }

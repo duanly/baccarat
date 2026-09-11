@@ -1070,3 +1070,7 @@ button.danger, .small-btn.danger { color: #ffb4b4; border-color: rgba(255,120,12
 .contact-dialog { width: min(360px, 100%); }
 .contact-body { padding: 16px; text-align: center; display: grid; gap: 10px; justify-items: center; font-size: 16px; }
 .contact-body p { margin: 0; }
+
+/* 余额变动提示（后台 / 房主上下分实时到账） */
+.balance-notice { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 60; max-width: 92vw; padding: 10px 18px; border-radius: 10px; background: rgba(20, 60, 30, 0.95); border: 1px solid #3fae5c; color: #c7ffd6; font-weight: 600; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.4); animation: notice-in .25s ease-out; }
+@keyframes notice-in { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
