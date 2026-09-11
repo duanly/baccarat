@@ -176,10 +176,11 @@ export function TablePage() {
     if (from && tray && amt) representativeChips(amt, 3).forEach((c, i) => fly(makeChipNode(c, 28), from, tray, { duration: 320, arc: 30, delay: i * 40, scaleTo: 0.6 }));
     setPending((p) => { const n = { ...p }; delete n[t!]; return n; });
     if (confirmed[t]) socket.send({ type: 'clearBet', tableId: id, betType: t });
+    sound.chipBack();
     native.vibrate();
   };
   // 重复：把上一局的注码直接提交（不用再按确认）
-  const rebet = () => { if (betting && lastBets && total(lastBets) > 0) { socket.send({ type: 'bet', tableId: id, bets: lastBets }); history.current = Object.keys(lastBets) as BetType[]; } };
+  const rebet = () => { if (betting && lastBets && total(lastBets) > 0) { sound.chipPlace(); socket.send({ type: 'bet', tableId: id, bets: lastBets }); history.current = Object.keys(lastBets) as BetType[]; } };
   const [lastBets, setLastBets] = useState<Bets | null>(null);
   useEffect(() => { if (table?.phase === 'dealing' && total(confirmed) > 0) setLastBets(confirmed); }, [table?.phase]); // eslint-disable-line
 
@@ -316,7 +317,7 @@ export function TablePage() {
             : <DealerScene flights={flights} onLanded={onLanded} shoeId={table.shoeId} />}
 
           {overlay && r && <SettleOverlay result={r} myNet={lastSettle} out={overlayOut} onClick={() => setOverlayOut(true)} />}
-          <div className="limit-mark">限红 ${table.limits.minBet.toLocaleString()} – ${table.limits.maxBet.toLocaleString()}<br />边注 ${table.limits.maxSideBet.toLocaleString()}<br />第 {table.roundNo} 局</div>
+          <div className="limit-mark"><span className="lm-name">{table.name}<br /></span>限红 ${table.limits.minBet.toLocaleString()} – ${table.limits.maxBet.toLocaleString()}<br />边注 ${table.limits.maxSideBet.toLocaleString()}<br />第 {table.roundNo} 局</div>
           <PhaseBanner phase={table.phase} secs={secs} roundId={table.roundId} nextRoundAt={table.nextRoundAt ?? null} countdownEndsAt={table.countdownEndsAt} />
           <div className="hands">
             <Hand side="player" cards={cleared ? [] : table.playerCards} total={cleared ? 0 : table.playerTotal} win={showResult && !cleared ? r!.outcome === 'player' : false}

@@ -3,6 +3,7 @@
  *
  *  card()      发牌：一声短促的"唰"（带通噪声 + 快速衰减）
  *  chipPlace() 押注：筹码推上桌的清脆一声（高频敲击 + 轻微滑动）
+ *  chipBack()  撤注：筹码收回（下行两声）
  *  chipPay(n)  派彩：一串陶瓷筹码碰撞声（多枚随机音高的短促叮声）
  *  cheer()     胜利：欢呼（人群噪声起伏 + 上扬和弦）
  *  tick(urgent) 倒计时：滴答（最后 1 秒略高）
@@ -25,16 +26,27 @@ function ac(): AudioContext | null {
     master.gain.value = 0.9;
     master.connect(ctx.destination);
   }
-  if (ctx.state === 'suspended') void ctx.resume();
+  if (ctx.state !== 'running') void ctx.resume();
   return ctx;
 }
 
-/** 在首次用户手势时解锁（iOS/Safari 要求） */
+/** 在用户手势里解锁：iOS 要求在手势回调里同步 resume，并且实际播放一段（静音）声音才算解锁 */
+function unlockNow() {
+  const c = ac(); if (!c) return;
+  try {
+    const buf = c.createBuffer(1, 1, c.sampleRate);
+    const src = c.createBufferSource(); src.buffer = buf; src.connect(c.destination); src.start(0);
+  } catch { /* ignore */ }
+  void c.resume();
+}
+let unlocked = false;
 export function unlockOnGesture() {
-  const h = () => { ac(); window.removeEventListener('pointerdown', h); window.removeEventListener('touchend', h); window.removeEventListener('keydown', h); };
-  window.addEventListener('pointerdown', h, { passive: true });
-  window.addEventListener('touchend', h, { passive: true });
-  window.addEventListener('keydown', h);
+  if (unlocked) return;
+  unlocked = true;
+  // 每次手势都尝试 resume：iOS 切后台 / 来电后 AudioContext 会变成 interrupted，需要再次手势恢复
+  const h = () => unlockNow();
+  for (const ev of ['touchstart', 'touchend', 'pointerdown', 'click', 'keydown']) window.addEventListener(ev, h, { passive: true });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void ctx?.resume(); });
 }
 
 export const sound = {
@@ -44,7 +56,7 @@ export const sound = {
     try { localStorage.setItem('baccarat.sound', v ? 'on' : 'off'); } catch { /* ignore */ }
     if (v) ac();
   },
-  toggle() { sound.enabled = !enabled; return enabled; },
+  toggle() { sound.enabled = !enabled; if (enabled) { unlockNow(); setTimeout(() => sound.chipPlace(), 50); } return enabled; },
 
   card() {
     const c = ac(); if (!c || !enabled) return;
@@ -66,6 +78,18 @@ export const sound = {
     const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3000;
     const g = c.createGain(); g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
     src.connect(hp).connect(g).connect(master!); src.start(t); src.stop(t + 0.1);
+  },
+
+  /** 撤注：筹码收回（下行的两声 + 短滑动） */
+  chipBack() {
+    const c = ac(); if (!c || !enabled) return;
+    const t = c.currentTime;
+    clink(c, t, 3200 + Math.random() * 400, 0.28, 0.07);
+    clink(c, t + 0.07, 2100 + Math.random() * 300, 0.3, 0.1);
+    const src = c.createBufferSource(); src.buffer = noiseBuffer(c, 0.14);
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.setValueAtTime(2600, t); bp.frequency.exponentialRampToValueAtTime(900, t + 0.13); bp.Q.value = 1;
+    const g = c.createGain(); g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    src.connect(bp).connect(g).connect(master!); src.start(t); src.stop(t + 0.15);
   },
 
   chipPay(n = 6) {

@@ -977,3 +977,9 @@ html, body { overscroll-behavior: none; }
 .table-page.landscape .chips { align-items: center; }
 .table-page.landscape .chip { width: 48px; height: 48px; font-size: 14px; }
 .table-page.landscape .actions button, .table-page.landscape .actions button.confirm { height: 46px; font-size: 16px; }
+/* 竖屏：顶栏不显示桌名（放进桌布左上角水印第一行），避免把昵称挤换行 */
+.lm-name { display: none; }
+.table-page.portrait .brand { display: none; }
+.table-page.portrait .lm-name { display: inline; color: rgba(255,255,255,.6); font-weight: 700; }
+.table-page.portrait .topbar { flex-wrap: nowrap; gap: 8px; }
+.table-page.portrait .userbar { gap: 6px; }
