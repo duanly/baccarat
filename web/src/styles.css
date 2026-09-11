@@ -925,3 +925,19 @@ html, body { overscroll-behavior: none; }
 .table-page.landscape .actions button, .table-page.landscape .actions button.confirm { height: 42px; font-size: 15px; padding: 0 16px; }
 .table-page.landscape .actions button.confirm { min-width: 150px; }
 .table-page.landscape .side { grid-row: 4; margin-top: 4px; }
+
+/* ---------- 竖屏：筹码区剩余高度上下平分——上半筹码行居中，下半按钮行居中 ---------- */
+.table-page.portrait .chips { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: 1fr 1fr; align-items: center; justify-items: center; gap: 0 4px; padding: 0 2px; }
+.table-page.portrait .chips .chip { grid-row: 1; margin: 0; }
+.table-page.portrait .actions { grid-column: 1 / -1; grid-row: 2; align-self: center; margin: 0; width: 100%; }
+.table-page.portrait .bet-hint { display: none; }
+
+/* ---------- 横屏：筹码在牌桌宽度内分散居中，按钮在下注区宽度内分散居中 ---------- */
+.table-page.landscape .chips { display: grid; grid-template-columns: minmax(0, 55fr) minmax(0, 45fr); column-gap: 8px; align-items: center; padding: 6px 0 4px; }
+.table-page.landscape .chips .chip { grid-column: 1; grid-row: 1; }
+.table-page.landscape .chips .chip:nth-child(1) { justify-self: start; }
+.table-page.landscape .chips { grid-template-columns: repeat(6, calc((55% - 4px) / 6 - 4px * 5 / 6)) minmax(0, 1fr); column-gap: 4px; }
+.table-page.landscape .chips .chip { grid-column: auto; justify-self: center; }
+.table-page.landscape .actions { grid-column: 7; grid-row: 1; margin: 0 0 0 4px; display: flex; justify-content: space-between; gap: 8px; }
+.table-page.landscape .actions button, .table-page.landscape .actions button.confirm { flex: 1 1 0; min-width: 0; padding: 0 6px; }
+.table-page.landscape .actions button.confirm { flex: 1.6 1 0; min-width: 0; }

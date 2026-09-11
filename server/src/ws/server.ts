@@ -7,6 +7,7 @@
  *   { type: 'unsubscribe', tableId }
  *   { type: 'bet', tableId, bets: { banker: 100, playerPair: 20 } }
  *   { type: 'clearBets', tableId }
+ *   { type: 'clearBet', tableId, betType }             撤回某个投注区
  *   { type: 'ping' }
  *
  * 服务端 → 客户端：
@@ -113,6 +114,12 @@ export function attachWs(server: Server, auth: AuthService, tables: TableManager
         const t = tables.get(msg.tableId);
         const r = t.placeBets(c.user.id, c.user.nickname, msg.bets ?? {});
         return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, ...r });
+      }
+      case 'clearBet': {
+        if (!c.user) throw new Error('未登录');
+        const t = tables.get(msg.tableId);
+        const r = t.clearBet(c.user.id, msg.betType);
+        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, bets: r.bets, balance: r.balance });
       }
       case 'clearBets': {
         if (!c.user) throw new Error('未登录');

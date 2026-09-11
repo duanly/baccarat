@@ -395,6 +395,22 @@ export class BaccaratTable extends EventEmitter {
     return balance;
   }
 
+  /** 撤回某一个投注区的全部注码（已确认部分退款） */
+  clearBet(userId: number, type: BetType): { bets: Bets; balance: number } {
+    if (this.phase !== 'betting') throw new Error('当前不可撤注');
+    const cur = this.bets.get(userId) ?? {};
+    const amt = cur[type] ?? 0;
+    if (!amt) return { bets: cur, balance: this.wallet.balance(userId) };
+    const next = { ...cur }; delete next[type];
+    if (sumBets(next) > 0) this.bets.set(userId, next); else this.bets.delete(userId);
+    this.allIns.delete(userId);
+    const st = this.sessions.get(userId)!;
+    st.wagered = round2(st.wagered - amt);
+    const balance = this.wallet.apply(userId, 'refund', amt, `${this.roundId}:${type}`);
+    this.emitBets();
+    return { bets: next, balance };
+  }
+
   getBets(userId: number): Bets {
     return this.bets.get(userId) ?? {};
   }
