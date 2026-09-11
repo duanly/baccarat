@@ -7,7 +7,7 @@ import { useSession } from '../App';
 import { useCountdown, PHASE_LABEL, syncClock } from '../lib/useCountdown';
 
 export function LobbyPage() {
-  const { user, logout, setUser } = useSession();
+  const { user, logout } = useSession();
   const [halls, setHalls] = useState<Hall[]>([]);
   const [active, setActive] = useState('lobby');
   const [err, setErr] = useState('');
@@ -22,10 +22,9 @@ export function LobbyPage() {
 
   const hall = halls.find((h) => h.id === active) ?? halls[0];
 
-  const deposit = async () => {
-    const r = await api.deposit(10000);
-    setUser(user ? { ...user, balance: r.balance } : user);
-  };
+  // 充值：不开放自助充值，由后台上分或房主转分
+  const [contact, setContact] = useState(false);
+  const deposit = () => setContact(true);
 
   return (
     <div className="lobby">
@@ -36,7 +35,7 @@ export function LobbyPage() {
           <span className="vip">VIP{user?.vipLevel}</span>
           <span className="balance">$ {user?.balance.toLocaleString()}</span>
           {user?.role === 'admin' && <Link to="/admin" className="ghost">管理后台</Link>}
-          <button onClick={deposit} className="ghost">充值(演示)</button>
+          <button onClick={deposit} className="ghost">充值</button>
           <button onClick={logout} className="ghost">退出</button>
         </div>
       </header>
@@ -60,6 +59,18 @@ export function LobbyPage() {
           </button>
         </div>
       </nav>
+      {contact && (
+        <div className="help-mask" onClick={() => setContact(false)}>
+          <div className="help-dialog contact-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="help-head"><b>充值</b><button className="help-close" onClick={() => setContact(false)} aria-label="关闭">×</button></div>
+            <div className="help-list contact-body">
+              <p>请联系客服充值。</p>
+              <p className="muted small">积分由客服在后台上分，或由私人房房主在房间内转给你。</p>
+              <button className="primary" onClick={() => setContact(false)}>知道了</button>
+            </div>
+          </div>
+        </div>
+      )}
       {err && <div className="error">{err}</div>}
       {active === 'rooms' && <RoomsSection canHost={!!user?.canHost} maxRooms={user?.maxRooms ?? 0} />}
       {active !== 'rooms' && hall && (

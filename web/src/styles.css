@@ -1067,3 +1067,6 @@ button.danger, .small-btn.danger { color: #ffb4b4; border-color: rgba(255,120,12
 .table-page .spot { box-shadow: none; }
 .table-page .bet-area.open .spot { box-shadow: none; }
 .table-page .bet-area.open .spot.tie { box-shadow: inset 0 0 0 3px rgba(110,220,150,.35), 0 0 12px rgba(110,220,150,.25); }
+.contact-dialog { width: min(360px, 100%); }
+.contact-body { padding: 16px; text-align: center; display: grid; gap: 10px; justify-items: center; font-size: 16px; }
+.contact-body p { margin: 0; }

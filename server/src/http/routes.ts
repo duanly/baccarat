@@ -59,7 +59,9 @@ export function apiRouter(d: Deps): Router {
   });
 
   /** 演示用充值（生产替换为支付回调） */
+  // 自助充值已关闭：积分只能由后台上分或私人房房主转分。DEMO_DEPOSIT=1 时保留演示充值（本地开发用）
   r.post('/me/deposit', requireUser, (req, res) => {
+    if (process.env.DEMO_DEPOSIT !== '1') throw new HttpError(403, '请联系客服充值');
     const amount = Number(req.body?.amount);
     if (!(amount > 0) || amount > 1_000_000) throw new HttpError(400, '金额无效');
     res.json({ balance: d.wallet.apply(req.user!.id, 'deposit', amount, 'demo deposit') });

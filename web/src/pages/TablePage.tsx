@@ -178,7 +178,7 @@ export function TablePage() {
     touch(target);
     setPending((p) => ({ ...p, [target]: (p[target] ?? 0) + available }));
   };
-  const submit = () => { if (total(pending) > 0) socket.send({ type: 'bet', tableId: id, bets: pending }); };
+  const submit = () => { if (total(pending) > 0) { sound.confirm(); socket.send({ type: 'bet', tableId: id, bets: pending }); } };
   /** 撤注：撤回最近下注的那个投注区的全部注码（待确认的直接清掉；已确认的请求服务端退款），筹码飞回筹码栏 */
   const undoLast = () => {
     let t = history.current.pop();

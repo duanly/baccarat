@@ -3,6 +3,7 @@
  *
  *  card()      发牌：一声短促的"唰"（带通噪声 + 快速衰减）
  *  chipPlace() 押注：筹码推上桌的清脆一声（高频敲击 + 轻微滑动）
+ *  confirm()   确认下注：咔 + 上扬双音
  *  chipBack()  撤注：筹码收回（下行两声）
  *  chipPay(n)  派彩：一串陶瓷筹码碰撞声（多枚随机音高的短促叮声）
  *  cheer()     胜利：欢呼（人群噪声起伏 + 上扬和弦）
@@ -95,6 +96,21 @@ export const sound = {
     const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3000;
     const g = c.createGain(); g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
     src.connect(hp).connect(g).connect(master!); src.start(t); src.stop(t + 0.1);
+  },
+
+  /** 确认下注：一声干脆的"咔"+ 短促上扬双音（注码已锁定的感觉） */
+  confirm() {
+    const c = ac(); if (!c || !enabled) return;
+    const t = c.currentTime;
+    const src = c.createBufferSource(); src.buffer = noiseBuffer(c, 0.03);
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2500;
+    const g0 = c.createGain(); g0.gain.setValueAtTime(0.35, t); g0.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+    src.connect(hp).connect(g0).connect(master!); src.start(t); src.stop(t + 0.04);
+    for (const [f, at, v] of [[880, 0.02, 0.22], [1320, 0.09, 0.2]] as const) {
+      const o = c.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t + at); g.gain.exponentialRampToValueAtTime(v, t + at + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + at + 0.16);
+      o.connect(g).connect(master!); o.start(t + at); o.stop(t + at + 0.2);
+    }
   },
 
   /** 撤注：筹码收回（下行的两声 + 短滑动） */
