@@ -223,11 +223,14 @@ export function TablePage() {
   useEffect(() => {
     const prev = prevOthers.current;
     const from = centerOf(document.querySelector('.players .panel-title')) ?? { x: window.innerWidth - 40, y: 80 };
+    let played = false;
     for (const [t, o] of Object.entries(others)) {
       const delta = o.amount - (prev[t] ?? 0);
       if (delta > 0 && Object.keys(prev).length) {
         const to = centerOf(document.querySelector(`.spot.${t} .others-wrap`)) ?? centerOf(document.querySelector(`.spot.${t}`));
         if (to) representativeChips(delta, 2).forEach((c, i) => fly(makeChipNode(c, 22), from, to, { duration: 500, arc: 80, delay: i * 60, scaleFrom: 0.8, scaleTo: 0.6 }));
+        // 别人下注也有筹码声（稍轻、延迟到筹码落桌时；同一次更新多个区域只响一声）
+        if (!played) { played = true; setTimeout(() => sound.chipPlace(0.55), 420); }
       }
     }
     const next: Record<string, number> = {};

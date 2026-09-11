@@ -2,7 +2,7 @@
  * 音效：全部用 Web Audio 实时合成，不依赖音频文件（壳 App / H5 都能用，包体不变大）。
  *
  *  card()      发牌：一声短促的"唰"（带通噪声 + 快速衰减）
- *  chipPlace() 押注：筹码推上桌的清脆一声（高频敲击 + 轻微滑动）
+ *  chipPlace(vol) 押注：筹码推上桌的清脆一声（高频敲击 + 轻微滑动）；别人下注时以较轻音量播放
  *  confirm()   确认下注：咔 + 上扬双音
  *  chipBack()  撤注：筹码收回（下行两声）
  *  chipPay(n)  派彩：一串陶瓷筹码碰撞声（多枚随机音高的短促叮声）
@@ -86,15 +86,16 @@ export const sound = {
     src.connect(bp).connect(g).connect(master!); src.start(t); src.stop(t + 0.2);
   },
 
-  chipPlace() {
+  /** 押注：筹码推上桌。vol 用于别人下注时放轻一点（默认 1 = 本人） */
+  chipPlace(vol = 1) {
     const c = ac(); if (!c || !enabled) return;
     const t = c.currentTime;
-    clink(c, t, 2600 + Math.random() * 600, 0.35, 0.09);
-    clink(c, t + 0.03, 3900 + Math.random() * 800, 0.18, 0.06);
+    clink(c, t, 2600 + Math.random() * 600, 0.35 * vol, 0.09);
+    clink(c, t + 0.03, 3900 + Math.random() * 800, 0.18 * vol, 0.06);
     // 轻微滑动
     const src = c.createBufferSource(); src.buffer = noiseBuffer(c, 0.08);
     const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3000;
-    const g = c.createGain(); g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+    const g = c.createGain(); g.gain.setValueAtTime(0.08 * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
     src.connect(hp).connect(g).connect(master!); src.start(t); src.stop(t + 0.1);
   },
 
