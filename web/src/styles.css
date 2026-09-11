@@ -962,6 +962,9 @@ html, body { overscroll-behavior: none; }
 .table-page .spot.player .mine-wrap, .table-page .spot.player .spot-amount { left: calc(50% - var(--tie) * .18); }
 .table-page .spot.banker .mine-wrap, .table-page .spot.banker .spot-amount { left: calc(50% + var(--tie) * .18); }
 .table-page .spot.tie .others-wrap { left: 14%; bottom: 12%; }
+/* 庄区左下角被「和」的圆弧切掉：其他玩家的筹码堆放到右下角（本人注额相应往左让一点） */
+.table-page .spot.banker .others-wrap, .table-page.landscape .spot.banker .others-wrap { left: auto; right: 4px; bottom: 3px; flex-direction: row-reverse; }
+.table-page .spot.banker .spot-amount { left: calc(50% + var(--tie) * .08); }
 .table-page .help-btn { top: 2px; right: 4px; }
 .table-page.landscape .bet-grid, .table-page.portrait .bet-grid { gap: 0; }
 .table-page.landscape .side-row, .table-page.portrait .side-row { gap: 0; }
