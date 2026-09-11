@@ -112,6 +112,7 @@ export function TablePage() {
           setTable((t) => t && ({ ...t, leaderboard: m.leaderboard }));
           break;
         case 'bet:ok':
+          if (ackTimer.current) { clearTimeout(ackTimer.current); ackTimer.current = null; }
           setConfirmed(m.bets); setPending({});
           if (m.allIn) { setMyAllIn(true); flash('梭哈 ALL IN！'); native.vibrate(); }
           break;
@@ -127,6 +128,7 @@ export function TablePage() {
           setBlocked(m.message ?? '房间已关闭');
           break;
         case 'error':
+          if (ackTimer.current) { clearTimeout(ackTimer.current); ackTimer.current = null; }
           if (/满房|上锁|密码|已关闭|正在关闭|VIP/.test(m.message) && !table) { setBlocked(m.message); break; }
           flash(m.message);
           setPending({}); history.current = [];
@@ -135,6 +137,20 @@ export function TablePage() {
     });
     return () => { off(); socket.unsubscribe(id); };
   }, [id, flash]);
+
+  // 连接状态提示：断线时显示"重连中"，重连成功后服务端会重推 table:state（含本人注码）
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    socket.onStatus = (st) => setOffline(st === 'closed');
+    setOffline(!socket.connected);
+    return () => { socket.onStatus = null; };
+  }, []);
+  // 下注后 4 秒没收到回执：多半是半开连接（手机静置后常见），强制重连，重连后会拿到服务端的真实注码
+  const ackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const expectAck = useCallback(() => {
+    if (ackTimer.current) clearTimeout(ackTimer.current);
+    ackTimer.current = setTimeout(() => { ackTimer.current = null; flash('网络不稳定，正在重连…'); socket.reconnect(); }, 4000);
+  }, [flash]);
 
   const onLanded = useCallback((id: number) => {
     setFlights((f) => {
@@ -178,7 +194,7 @@ export function TablePage() {
     touch(target);
     setPending((p) => ({ ...p, [target]: (p[target] ?? 0) + available }));
   };
-  const submit = () => { if (total(pending) > 0) { sound.confirm(); socket.send({ type: 'bet', tableId: id, bets: pending }); } };
+  const submit = () => { if (total(pending) > 0) { sound.confirm(); socket.send({ type: 'bet', tableId: id, bets: pending }); expectAck(); } };
   /** 撤注：撤回最近下注的那个投注区的全部注码（待确认的直接清掉；已确认的请求服务端退款），筹码飞回筹码栏 */
   const undoLast = () => {
     let t = history.current.pop();
@@ -189,12 +205,12 @@ export function TablePage() {
     const from = centerOf(document.querySelector(`.spot.${t} .mine-wrap`));
     if (from && tray && amt) representativeChips(amt, 3).forEach((c, i) => fly(makeChipNode(c, 28), from, tray, { duration: 320, arc: 30, delay: i * 40, scaleTo: 0.6 }));
     setPending((p) => { const n = { ...p }; delete n[t!]; return n; });
-    if (confirmed[t]) socket.send({ type: 'clearBet', tableId: id, betType: t });
+    if (confirmed[t]) { socket.send({ type: 'clearBet', tableId: id, betType: t }); expectAck(); }
     sound.chipBack();
     native.vibrate();
   };
   // 重复：把上一局的注码直接提交（不用再按确认）
-  const rebet = () => { if (betting && lastBets && total(lastBets) > 0) { sound.chipPlace(); socket.send({ type: 'bet', tableId: id, bets: lastBets }); history.current = Object.keys(lastBets) as BetType[]; } };
+  const rebet = () => { if (betting && lastBets && total(lastBets) > 0) { sound.chipPlace(); socket.send({ type: 'bet', tableId: id, bets: lastBets }); expectAck(); history.current = Object.keys(lastBets) as BetType[]; } };
   const [lastBets, setLastBets] = useState<Bets | null>(null);
   useEffect(() => { if (table?.phase === 'dealing' && total(confirmed) > 0) setLastBets(confirmed); }, [table?.phase]); // eslint-disable-line
 
@@ -405,6 +421,7 @@ export function TablePage() {
 
       {!wide && <RoadmapPanel rm={table.roadmap} />}
       {toast && <div className="toast">{toast}</div>}
+      {offline && <div className="net-badge">连接中断，正在重连…</div>}
     </div>
   );
 }

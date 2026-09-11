@@ -1077,3 +1077,6 @@ button.danger, .small-btn.danger { color: #ffb4b4; border-color: rgba(255,120,12
 /* 余额变动提示（后台 / 房主上下分实时到账） */
 .balance-notice { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 60; max-width: 92vw; padding: 10px 18px; border-radius: 10px; background: rgba(20, 60, 30, 0.95); border: 1px solid #3fae5c; color: #c7ffd6; font-weight: 600; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.4); animation: notice-in .25s ease-out; }
 @keyframes notice-in { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* 断线提示 */
+.net-badge { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 70; padding: 5px 12px; border-radius: 999px; background: rgba(90, 30, 30, .95); border: 1px solid #c0503f; color: #ffd0c8; font-size: 12px; font-weight: 600; animation: notice-in .25s ease-out; }

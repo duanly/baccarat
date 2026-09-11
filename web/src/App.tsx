@@ -27,7 +27,7 @@ function Shell() {
   useEffect(() => {
     auth.restore().then(() => refresh()).finally(() => { setReady(true); socket.connect(); });
     // App 从后台切回：重连 WS、刷新余额
-    return native.onLifecycle((s) => { if (s === 'resumed') { socket.connect(); socket.reauth(); refresh(); } });
+    return native.onLifecycle((s) => { if (s === 'resumed') { socket.wake(3000); refresh(); } });
   }, []);
 
   // 结算 / 下注 / 后台上下分推送 → 更新余额

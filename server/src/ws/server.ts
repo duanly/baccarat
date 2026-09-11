@@ -35,6 +35,7 @@ interface Client {
   subs: Set<string>;
   ip: string;
   ua: string;
+  alive: boolean;   // 心跳：上一轮 ping 之后有没有收到过 pong / 消息
 }
 
 export function attachWs(server: Server, auth: AuthService, tables: TableManager, presence: Presence, rooms?: import('../rooms.js').RoomService, wallet?: Wallet) {
@@ -70,15 +71,29 @@ export function attachWs(server: Server, auth: AuthService, tables: TableManager
     });
   }
 
+  // 服务端心跳：每 30s ping 一次，两轮没回应就判定连接已死（手机静置后常见的半开连接），
+  // 主动 terminate 触发 close 处理，把人从牌桌上请下去、释放座位
+  const sweeper = setInterval(() => {
+    for (const c of clients) {
+      if (!c.alive) { c.ws.terminate(); continue; }
+      c.alive = false;
+      try { c.ws.ping(); } catch { /* ignore */ }
+    }
+  }, 30_000);
+  sweeper.unref?.();
+  wss.on('close', () => clearInterval(sweeper));
+
   wss.on('connection', (ws, req) => {
     const client: Client = {
-      ws, user: null, subs: new Set(),
+      ws, user: null, subs: new Set(), alive: true,
       ip: clientIp(req.headers as any, req.socket.remoteAddress),
       ua: String(req.headers['user-agent'] ?? ''),
     };
     clients.add(client);
+    ws.on('pong', () => { client.alive = true; });
 
     ws.on('message', (raw) => {
+      client.alive = true;
       let msg: any;
       try { msg = JSON.parse(String(raw)); } catch { return send(ws, { type: 'error', message: 'bad json' }); }
       try {
