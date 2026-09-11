@@ -953,8 +953,8 @@ html, body { overscroll-behavior: none; }
 .table-page .main-row { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 0; container-type: size; }
 .table-page .main-row > .spot { --tie: min(92cqh, 34cqw); }
 .table-page .spot.player, .table-page .spot.banker { border-radius: 0; }
-.table-page .spot.player { -webkit-mask-image: radial-gradient(circle at 100% 50%, transparent calc(var(--tie) / 2 + 2px), #000 calc(var(--tie) / 2 + 3px)); mask-image: radial-gradient(circle at 100% 50%, transparent calc(var(--tie) / 2 + 2px), #000 calc(var(--tie) / 2 + 3px)); }
-.table-page .spot.banker { -webkit-mask-image: radial-gradient(circle at 0% 50%, transparent calc(var(--tie) / 2 + 2px), #000 calc(var(--tie) / 2 + 3px)); mask-image: radial-gradient(circle at 0% 50%, transparent calc(var(--tie) / 2 + 2px), #000 calc(var(--tie) / 2 + 3px)); }
+.table-page .spot.player { -webkit-mask-image: radial-gradient(circle at 100% 50%, transparent calc(var(--tie) / 2), #000 calc(var(--tie) / 2 + 1px)); mask-image: radial-gradient(circle at 100% 50%, transparent calc(var(--tie) / 2), #000 calc(var(--tie) / 2 + 1px)); }
+.table-page .spot.banker { -webkit-mask-image: radial-gradient(circle at 0% 50%, transparent calc(var(--tie) / 2), #000 calc(var(--tie) / 2 + 1px)); mask-image: radial-gradient(circle at 0% 50%, transparent calc(var(--tie) / 2), #000 calc(var(--tie) / 2 + 1px)); }
 .table-page .spot.tie, .table-page.landscape .spot.tie { position: absolute; left: 50%; top: 50%; width: var(--tie); height: var(--tie); transform: translate(-50%, -50%); z-index: 2; border-radius: 50%; border-width: 2px; justify-self: auto; align-self: auto; }
 .table-page .bet-area.open .spot.tie:active { transform: translate(-50%, -50%) scale(.97); }
 .table-page .spot.player .spot-name { padding-right: calc(var(--tie) * .35); }
@@ -1028,3 +1028,42 @@ button.danger, .small-btn.danger { color: #ffb4b4; border-color: rgba(255,120,12
   .room-members td:nth-child(2) .dot { margin: 0; }
   .room-row input { width: 76px; }
 }
+
+/* ---------- 大厅：品牌居中 + 大号厅入口 ---------- */
+.lobby-top { flex-wrap: wrap; justify-content: center; }
+.lobby-brand { width: 100%; text-align: center; font-size: 22px; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.logo-b { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--gold); color: var(--gold); font-family: Georgia, "Times New Roman", serif; font-weight: 900; font-size: 19px; line-height: 1; box-shadow: 0 0 10px rgba(212,175,55,.35); }
+.lobby-top .userbar { margin: 4px auto 0; justify-content: center; flex-wrap: wrap; }
+.hall-nav { display: grid; gap: 8px; padding: 12px 16px 0; }
+.hall-btn { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--text); text-align: left; min-width: 0; }
+.hall-btn .hall-ico { font-size: 22px; line-height: 1; width: 30px; text-align: center; flex: none; }
+.hall-btn .hall-txt { display: flex; flex-direction: column; min-width: 0; }
+.hall-btn .hall-txt b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hall-btn .hall-txt small { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hall-btn.main { padding: 14px 18px; background: linear-gradient(135deg, #2a4a2e, #163a20); border-color: rgba(212,175,55,.55); box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08); }
+.hall-btn.main .hall-ico { font-size: 30px; width: 40px; color: var(--gold); }
+.hall-btn.main .hall-txt b { font-size: 19px; color: #fff; }
+.hall-btn.main .hall-txt small { color: rgba(255,255,255,.7); }
+.hall-btn.active { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 4px 14px rgba(212,175,55,.25); }
+.hall-btn.vip { background: #2d2410; } .hall-btn.vip .hall-ico { color: var(--gold); }
+.hall-btn.vip.locked { opacity: .6; }
+.hall-btn.rooms { background: #1f2d1f; }
+.hall-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 640px) {
+  .hall-btn { padding: 8px 6px; gap: 6px; flex-direction: column; text-align: center; }
+  .hall-btn .hall-txt { align-items: center; }
+  .hall-btn .hall-txt b { font-size: 13px; } .hall-btn .hall-txt small { font-size: 10px; }
+  .hall-btn.main { flex-direction: row; text-align: left; padding: 12px 16px; }
+  .hall-btn.main .hall-txt { align-items: flex-start; }
+  .lobby-brand { font-size: 20px; }
+}
+
+/* ---------- 下注布四角：外圈圆角直接落在四个角的格子上，去掉容器背景/描边带来的毛边 ---------- */
+.table-page .bet-grid { background: transparent; overflow: visible; border-radius: 0; }
+.table-page .side-row:first-child .spot:first-child { border-top-left-radius: 12px; }
+.table-page .side-row:first-child .spot:last-child { border-top-right-radius: 12px; }
+.table-page .side-row:last-child .spot:first-child { border-bottom-left-radius: 12px; }
+.table-page .side-row:last-child .spot:last-child { border-bottom-right-radius: 12px; }
+.table-page .spot { box-shadow: none; }
+.table-page .bet-area.open .spot { box-shadow: none; }
+.table-page .bet-area.open .spot.tie { box-shadow: inset 0 0 0 3px rgba(110,220,150,.35), 0 0 12px rgba(110,220,150,.25); }

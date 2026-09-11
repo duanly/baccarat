@@ -57,6 +57,11 @@ export function attachWs(server: Server, auth: AuthService, tables: TableManager
     t.on('settled', (e) => {
       for (const c of clients) if (c.user?.id === e.userId) send(c.ws, { type: 'settled', ...e });
     });
+    // 私人房间销毁：通知房内所有人并清掉订阅
+    t.on('closed', () => {
+      broadcast({ type: 'table:closed', tableId: id, message: '房间已关闭' });
+      for (const c of clients) c.subs.delete(id);
+    });
   }
 
   wss.on('connection', (ws, req) => {
@@ -78,7 +83,7 @@ export function attachWs(server: Server, auth: AuthService, tables: TableManager
     });
 
     ws.on('close', () => {
-      for (const id of client.subs) if (client.user) tables.get(id).leave(client.user.id);
+      for (const id of client.subs) if (client.user) tables.tables.get(id)?.leave(client.user.id);
       presence.disconnect(client);
       clients.delete(client);
     });
@@ -111,7 +116,7 @@ export function attachWs(server: Server, auth: AuthService, tables: TableManager
       }
       case 'unsubscribe': {
         c.subs.delete(msg.tableId);
-        if (c.user) tables.get(msg.tableId).leave(c.user.id);
+        if (c.user) tables.tables.get(msg.tableId)?.leave(c.user.id);   // 房间可能已销毁
         return;
       }
       case 'bet': {

@@ -29,16 +29,8 @@ export function LobbyPage() {
 
   return (
     <div className="lobby">
-      <header className="topbar">
-        <div className="brand">百家乐 <span className="gold">Baccarat</span></div>
-        <nav className="hall-tabs">
-          {halls.map((h) => (
-            <button key={h.id} className={`${h.id === hall?.id && active !== 'rooms' ? 'active' : ''} ${h.kind}`} onClick={() => setActive(h.id)}>
-              {h.kind === 'vip' ? '♛ ' : ''}{h.name}{h.locked ? ' 🔒' : ''}
-            </button>
-          ))}
-          <button className={`rooms ${active === 'rooms' ? 'active' : ''}`} onClick={() => setActive('rooms')}>🔑 密码房</button>
-        </nav>
+      <header className="topbar lobby-top">
+        <div className="brand lobby-brand"><span className="logo-b">B</span>百家乐 <span className="gold">Baccarat</span></div>
         <div className="userbar">
           <span>{user?.nickname}</span>
           <span className="vip">VIP{user?.vipLevel}</span>
@@ -48,6 +40,26 @@ export function LobbyPage() {
           <button onClick={logout} className="ghost">退出</button>
         </div>
       </header>
+      <nav className="hall-nav">
+        {halls.filter((h) => h.kind === 'lobby').map((h) => (
+          <button key={h.id} className={`hall-btn main ${h.id === hall?.id && active !== 'rooms' ? 'active' : ''}`} onClick={() => setActive(h.id)}>
+            <span className="hall-ico">♠</span>
+            <span className="hall-txt"><b>{h.name}</b><small>快速桌 · RNG 自动派牌</small></span>
+          </button>
+        ))}
+        <div className="hall-row">
+          {halls.filter((h) => h.kind === 'vip').map((h) => (
+            <button key={h.id} className={`hall-btn vip ${h.id === hall?.id && active !== 'rooms' ? 'active' : ''} ${h.locked ? 'locked' : ''}`} onClick={() => setActive(h.id)}>
+              <span className="hall-ico">♛</span>
+              <span className="hall-txt"><b>{h.name}</b><small>{h.locked ? `需 VIP${h.minVipLevel}` : '真人荷官'}</small></span>
+            </button>
+          ))}
+          <button className={`hall-btn rooms ${active === 'rooms' ? 'active' : ''}`} onClick={() => setActive('rooms')}>
+            <span className="hall-ico">🔑</span>
+            <span className="hall-txt"><b>密码房</b><small>私人房间</small></span>
+          </button>
+        </div>
+      </nav>
       {err && <div className="error">{err}</div>}
       {active === 'rooms' && <RoomsSection canHost={!!user?.canHost} maxRooms={user?.maxRooms ?? 0} />}
       {active !== 'rooms' && hall && (

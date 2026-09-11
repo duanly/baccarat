@@ -123,8 +123,11 @@ export function TablePage() {
           setTimeout(() => setLastSettle(null), 6000);
           break;
         }
+        case 'table:closed':
+          setBlocked(m.message ?? '房间已关闭');
+          break;
         case 'error':
-          if (/满房|上锁|密码|已关闭|VIP/.test(m.message) && !table) { setBlocked(m.message); break; }
+          if (/满房|上锁|密码|已关闭|正在关闭|VIP/.test(m.message) && !table) { setBlocked(m.message); break; }
           flash(m.message);
           setPending({}); history.current = [];
           break;

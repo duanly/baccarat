@@ -43,7 +43,11 @@ export function RoomPanel({ room: initial, onClose, onRoomChange, onBalance }: {
     native.vibrate();
   });
   const kick = (m: RoomMember) => { if (confirm(`移除成员「${m.nickname}」？`)) run(() => api.kickMember(room.id, m.userId)); };
-  const close = () => { if (confirm('关闭房间后所有人将退出，账单仍可在后台查询。确定关闭？')) run(async () => { await api.closeRoom(room.id); onClose(); location.href = '/'; }); };
+  const close = () => { if (confirm('关闭房间后所有人将退出，账单仍可在后台查询。确定关闭？')) run(async () => {
+    const r: any = await api.closeRoom(room.id);
+    if (r.closing) { alert('本局正在进行，等这一局结算完房间会自动关闭并把大家送回大厅。'); onClose(); return; }
+    onClose(); location.href = '/';
+  }); };
   const copyPwd = () => { if (room.password) { native.setClipboard?.(room.password); try { navigator.clipboard?.writeText(room.password); } catch { /* ignore */ } } };
 
   const totals = members.reduce((a, m) => ({ wagered: a.wagered + m.wagered, net: a.net + m.net }), { wagered: 0, net: 0 });

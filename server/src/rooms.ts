@@ -55,6 +55,7 @@ export class RoomService {
   /** 进桌前的校验（HTTP 取快照 / WS 订阅共用）：只有成员能进；上锁后非成员进不来 */
   assertCanEnter(roomId: string, userId: number) {
     const r = this.row(roomId);
+    if (r.status === 'closing') throw new HttpError(410, '房间正在关闭');
     if (r.status !== 'active') throw new HttpError(410, '房间已关闭');
     if (!this.isMember(roomId, userId)) throw new HttpError(403, r.locked ? '房间已上锁' : '请先输入房间密码');
   }
@@ -201,11 +202,43 @@ export class RoomService {
       WHERE b.table_id = ? ORDER BY b.created_at ASC`).all(id) as any[];
   }
 
+  /**
+   * 关闭房间：投注中 / 空闲时立刻关（本局注码全部退还）；发牌或派彩中则标记为"关闭中"，等本局结算完、下一局开始前再销毁。
+   * 销毁时给房内所有人推 table:closed，前端回大厅。
+   */
   close(id: string, userId: number) {
     this.assertOwner(id, userId);
+    const t = this.tables.tables.get(id);
+    if (!t) { this.finalize(id); return { closed: true }; }
+    const finalize = () => this.finalize(id);
+    if (t.phase === 'betting' || t.phase === 'idle' || t.phase === 'shuffling') {
+      if (t.phase === 'betting') t.voidRound('房间关闭');   // 退还本局注码
+      finalize();
+      return { closed: true };
+    }
+    // 发牌 / 派彩中：等本局结束（下一局 openBetting 触发 state=betting）再销毁
+    this.db.prepare("UPDATE rooms SET status = 'closing' WHERE id = ?").run(id);
+    const onState = (snap: any) => {
+      if (snap.phase !== 'betting') return;
+      t.off('state', onState);
+      t.voidRound('房间关闭');   // 新一局刚开还没人下注，直接作废并销毁
+      finalize();
+    };
+    t.on('state', onState);
+    return { closed: false, closing: true };
+  }
+
+  private finalize(id: string) {
     this.db.prepare("UPDATE rooms SET status = 'closed', closed_at = ? WHERE id = ?").run(Date.now(), id);
     const t = this.tables.tables.get(id);
-    if (t) { t.stop(); this.tables.tables.delete(id); const h = this.tables.halls.find((x) => x.id === PRIVATE_HALL); if (h) h.tableIds = h.tableIds.filter((x) => x !== id); }
+    if (t) {
+      t.stop();
+      t.emit('closed', { tableId: id });
+      t.removeAllListeners();
+      this.tables.tables.delete(id);
+      const h = this.tables.halls.find((x) => x.id === PRIVATE_HALL);
+      if (h) h.tableIds = h.tableIds.filter((x) => x !== id);
+    }
   }
 
   /** 后台：全部房间（含已关闭） */

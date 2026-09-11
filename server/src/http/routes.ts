@@ -114,7 +114,7 @@ export function apiRouter(d: Deps): Router {
   });
   r.post('/rooms/:id/transfer', requireUser, (req, res) => res.json(d.rooms.transfer(req.params.id, req.user!.id, Number(req.body?.userId), Number(req.body?.amount), req.body?.note)));
   r.delete('/rooms/:id/members/:uid', requireUser, (req, res) => { d.rooms.kick(req.params.id, req.user!.id, Number(req.params.uid)); res.json({ ok: true }); });
-  r.delete('/rooms/:id', requireUser, (req, res) => { d.rooms.close(req.params.id, req.user!.id); res.json({ ok: true }); });
+  r.delete('/rooms/:id', requireUser, (req, res) => res.json({ ok: true, ...d.rooms.close(req.params.id, req.user!.id) }));
   r.get('/rooms/:id/ledger.csv', requireUser, (req, res) => {
     const rows = d.rooms.ledger(req.params.id, req.user!.id);
     const info = d.rooms.info(req.params.id, req.user!.id);
