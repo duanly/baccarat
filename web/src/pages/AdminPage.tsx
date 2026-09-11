@@ -25,7 +25,7 @@ export function AdminPage() {
   const [list, setList] = useState<{ total: number; items: any[] }>({ total: 0, items: [] });
   const [selected, setSelected] = useState<number | null>(null);
   const [err, setErr] = useState('');
-  const [view, setView] = useState<'players' | 'tables' | 'rooms'>('players');
+  const [view, setView] = useState<'players' | 'tables' | 'rooms' | 'bots'>('players');
 
   const loadGroups = useCallback(() => admin.groups().then((r) => setGroups(r.items)).catch((e) => setErr(e.message)), []);
   const loadList = useCallback(() => {
@@ -66,13 +66,15 @@ export function AdminPage() {
           <button className={view === 'players' ? 'active' : ''} onClick={() => setView('players')}>玩家</button>
           <button className={view === 'tables' ? 'active' : ''} onClick={() => setView('tables')}>牌桌设置</button>
           <button className={view === 'rooms' ? 'active' : ''} onClick={() => setView('rooms')}>私人房间{summary?.roomsActive ? `（${summary.roomsActive}）` : ''}</button>
+          <button className={view === 'bots' ? 'active' : ''} onClick={() => setView('bots')}>托账号</button>
         </div>
         <div className="userbar"><span>{user?.nickname}</span><button className="ghost" onClick={logout}>退出</button></div>
       </header>
 
       {view === 'tables' && <TableSettings onError={setErr} />}
       {view === 'rooms' && <RoomsAdmin onError={setErr} />}
-      {view === 'tables' && err && <div className="error" onClick={() => setErr('')}>{err}</div>}
+      {view === 'bots' && <BotsAdmin onError={setErr} />}
+      {(view === 'tables' || view === 'bots') && err && <div className="error" onClick={() => setErr('')}>{err}</div>}
       {view === 'players' && <>
 
       {summary && (
@@ -428,6 +430,78 @@ function TableSettings({ onError }: { onError: (m: string) => void }) {
   );
 }
 
+
+/** 后台：托账号（机器人）开关与参数 */
+function BotsAdmin({ onError }: { onError: (m: string) => void }) {
+  const [st, setSt] = useState<any>(null);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [names, setNames] = useState<Record<string, string>>({});
+  const load = useCallback(() => admin.bots().then(setSt).catch((e) => onError(e.message)), [onError]);
+  useEffect(() => { load(); const t = setInterval(load, 5000); return () => clearInterval(t); }, [load]);
+  useEffect(() => { admin.tables().then((r) => setNames(Object.fromEntries(r.items.map((t: any) => [t.id, t.name])))).catch(() => {}); }, []);
+  if (!st) return <div className="center muted">加载中…</div>;
+
+  const FIELDS: { k: string; label: string; hint: string; step?: number }[] = [
+    { k: 'count', label: '账号数量', hint: '启用的托账号总数（账号不够会自动补建）' },
+    { k: 'maxPerTable', label: '每桌上限', hint: '一张桌最多坐几个托，其余位置留给真人' },
+    { k: 'betChance', label: '每局下注概率', hint: '0~1，越低越像观望的真人', step: 0.05 },
+    { k: 'minBalance', label: '补分线', hint: '余额低于此值自动补分' },
+    { k: 'topup', label: '补分额度', hint: '每次补分约为此值的 0.6~1.4 倍' },
+  ];
+  const val = (k: string) => draft[k] ?? String(st[k]);
+  const dirty = FIELDS.some((f) => draft[f.k] !== undefined && Number(draft[f.k]) !== st[f.k]);
+  const save = async (extra: Record<string, unknown> = {}) => {
+    setBusy(true);
+    try {
+      const patch: Record<string, unknown> = { ...extra };
+      for (const f of FIELDS) if (draft[f.k] !== undefined) patch[f.k] = Number(draft[f.k]);
+      setSt(await admin.updateBots(patch)); setDraft({});
+    } catch (e: any) { onError(e.message); } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="table-settings">
+      <div className="muted small" style={{ padding: '8px 16px' }}>
+        托账号只在大厅 RNG 桌活动：随机挑桌坐 5~40 局后换桌休息几分钟；每局按概率决定下不下，下注时间在投注窗口内随机（不会一开盘就下），偶尔分两次追加；注码按限红梯度随机、以小注为主，偏好庄/闲，少量和/对子。账号统一归入分组「tuo」，用户名 tuo001 起，随机密码不可登录；输光会自动补分（流水记为 adjust / bot topup）。后台首页统计已排除托账号。
+      </div>
+      <div className="ts-hall">
+        <div className="panel-title">
+          状态：{st.running ? <span className="win">运行中</span> : <span className="muted">已停止</span>}
+          <span className="muted small">　在桌 {st.seated} / 启用 {st.active}</span>
+          <span className="grow" />
+          <button className={st.enabled ? 'ghost danger' : 'primary'} disabled={busy} onClick={() => save({ enabled: !st.enabled })}>{st.enabled ? '停止托账号' : '启动托账号'}</button>
+        </div>
+        <div className="table-wrap">
+          <table className="tbl">
+            <thead><tr>{FIELDS.map((f) => <th key={f.k}>{f.label}</th>)}<th></th></tr></thead>
+            <tbody>
+              <tr className={dirty ? 'dirty' : ''}>
+                {FIELDS.map((f) => (
+                  <td key={f.k}>
+                    <input type="number" step={f.step ?? 1} value={val(f.k)} className="ts-input" title={f.hint}
+                      onChange={(e) => setDraft((d) => ({ ...d, [f.k]: e.target.value }))} />
+                    <div className="muted small">{f.hint}</div>
+                  </td>
+                ))}
+                <td className="ts-actions"><button className="primary" disabled={!dirty || busy} onClick={() => save()}>保存</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="ts-hall">
+        <div className="panel-title">各桌托数量</div>
+        <div className="kv-grid" style={{ padding: '0 16px 12px' }}>
+          {Object.keys(st.perTable ?? {}).length === 0 && <div className="muted small">当前没有托在桌上</div>}
+          {Object.entries(st.perTable ?? {}).map(([id, n]) => (
+            <div className="kv" key={id}><div className="muted small">{names[id] ?? id}</div><div className="kv-v">{n as number} 个</div></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /** 后台：私人房间列表（数量、状态、房主、成员、流水、输赢）+ 成员明细 */
 function RoomsAdmin({ onError }: { onError: (m: string) => void }) {

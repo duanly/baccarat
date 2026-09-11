@@ -424,6 +424,9 @@ export class BaccaratTable extends EventEmitter {
   // ---------- 在线人数 / 排行榜 ----------
 
   get isFull(): boolean { return this.online.size >= this.cfg.capacity; }
+  get onlineCount(): number { return this.online.size; }
+  /** 最近 n 局的结果（机器人跟路用） */
+  recentOutcomes(n = 3): ('player' | 'banker' | 'tie')[] { return this.history.slice(-n).map((r) => r.outcome); }
 
   join(userId: number, nickname: string) {
     if (!this.online.has(userId) && this.isFull) throw new Error('FULL');

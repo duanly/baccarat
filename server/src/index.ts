@@ -9,6 +9,7 @@ import { Wallet } from './wallet.js';
 import { TableManager, SqlitePersistence, seedDefaultLayout } from './game/manager.js';
 import { apiRouter, errorHandler } from './http/routes.js';
 import { attachWs } from './ws/server.js';
+import { BotService } from './bots.js';
 import { adminRouter } from './http/admin.js';
 import { Presence } from './presence.js';
 import { RoomService } from './rooms.js';
@@ -55,7 +56,8 @@ app.use((_req, res, next) => {
 });
 app.get('/health', (_req, res) => res.json({ ok: true, tables: tables.tables.size }));
 const rooms = new RoomService(db, wallet, tables);
-app.use('/api/admin', adminRouter({ db, auth, wallet, presence, tables, rooms }));
+const bots = new BotService(db, wallet, tables);
+app.use('/api/admin', adminRouter({ db, auth, wallet, presence, tables, rooms, bots }));
 app.use('/api', apiRouter({ auth, wallet, tables, db, dealerApiKey: DEALER_API_KEY, rooms }));
 
 // 生产：托管前端构建产物
@@ -71,6 +73,7 @@ attachWs(server, auth, tables, presence, rooms, wallet);
 tables.startAll();
 rooms.restore();   // 恢复活跃的私人房间（各自独立的 RNG 牌桌）
 
+if (bots.config.enabled) bots.start();
 server.listen(PORT, () => {
   console.log(`baccarat server on http://localhost:${PORT}  (db: ${DB_PATH})`);
   console.log(`halls: ${tables.halls.map((h) => `${h.name}[${h.tableIds.length}]`).join(', ')}`);

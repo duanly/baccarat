@@ -18,9 +18,10 @@ import { AuthService, HttpError } from '../auth.js';
 import type { Wallet } from '../wallet.js';
 import type { Presence } from '../presence.js';
 import type { TableManager } from '../game/manager.js';
+import type { BotService } from '../bots.js';
 import type { RoomService } from '../rooms.js';
 
-interface Deps { db: DB; auth: AuthService; wallet: Wallet; presence: Presence; tables: TableManager; rooms: RoomService }
+interface Deps { db: DB; auth: AuthService; wallet: Wallet; presence: Presence; tables: TableManager; rooms: RoomService; bots: BotService }
 
 export function adminRouter(d: Deps): Router {
   const r = Router();
@@ -36,19 +37,23 @@ export function adminRouter(d: Deps): Router {
   r.get('/summary', (_req, res) => {
     const today = startOfDay();
     const row = d.db.prepare(`SELECT
-        (SELECT COUNT(*) FROM users WHERE role = 'player') AS players,
-        (SELECT COUNT(*) FROM users WHERE role = 'player' AND created_at >= ?) AS newToday,
-        (SELECT COALESCE(SUM(amount),0) FROM bets WHERE created_at >= ?) AS wageredToday,
-        (SELECT COALESCE(SUM(net),0) FROM bets WHERE created_at >= ?) AS playerNetToday,
-        (SELECT COALESCE(SUM(amount),0) FROM transactions WHERE kind='deposit' AND created_at >= ?) AS depositToday,
-        (SELECT COALESCE(-SUM(amount),0) FROM transactions WHERE kind='withdraw' AND created_at >= ?) AS withdrawToday,
-        (SELECT COALESCE(SUM(balance),0) FROM users WHERE role = 'player') AS totalBalance,
+        (SELECT COUNT(*) FROM users WHERE role = 'player' AND is_bot = 0) AS players,
+        (SELECT COUNT(*) FROM users WHERE role = 'player' AND is_bot = 0 AND created_at >= ?) AS newToday,
+        (SELECT COALESCE(SUM(b.amount),0) FROM bets b JOIN users u ON u.id = b.user_id WHERE b.created_at >= ? AND u.is_bot = 0) AS wageredToday,
+        (SELECT COALESCE(SUM(b.net),0) FROM bets b JOIN users u ON u.id = b.user_id WHERE b.created_at >= ? AND u.is_bot = 0) AS playerNetToday,
+        (SELECT COALESCE(SUM(t.amount),0) FROM transactions t JOIN users u ON u.id = t.user_id WHERE t.kind='deposit' AND t.created_at >= ? AND u.is_bot = 0) AS depositToday,
+        (SELECT COALESCE(-SUM(t.amount),0) FROM transactions t JOIN users u ON u.id = t.user_id WHERE t.kind='withdraw' AND t.created_at >= ? AND u.is_bot = 0) AS withdrawToday,
+        (SELECT COALESCE(SUM(balance),0) FROM users WHERE role = 'player' AND is_bot = 0) AS totalBalance,
         (SELECT COUNT(*) FROM rooms WHERE status = 'active') AS roomsActive,
         (SELECT COALESCE(SUM(amount),0) FROM bets WHERE created_at >= ? AND table_id LIKE 'room-%') AS wageredPrivateToday`)
       .get(today, today, today, today, today, today) as any;
     const online = [...d.presence.onlineIds()].filter((id) => (d.db.prepare('SELECT role FROM users WHERE id = ?').get(id) as any)?.role === 'player').length;
     res.json({ ...row, online });
   });
+
+  // ---------- 托账号（机器人） ----------
+  r.get('/bots', (_req, res) => res.json(d.bots.status()));
+  r.patch('/bots', (req, res) => { d.bots.update(req.body ?? {}); res.json(d.bots.status()); });
 
   // ---------- 私人房间 ----------
   r.get('/rooms', (_req, res) => {

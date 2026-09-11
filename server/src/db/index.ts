@@ -107,6 +107,11 @@ function migrate(db: DB) {
     CREATE INDEX IF NOT EXISTS idx_bets_round ON bets(round_id);
     CREATE INDEX IF NOT EXISTS idx_bets_user ON bets(user_id, id);
     -- 后台可调的每桌参数（下注时长 / 发牌间隔 / 派彩停顿 / 限红）
+    CREATE TABLE IF NOT EXISTS kv (
+      key   TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS table_settings (
       table_id             TEXT PRIMARY KEY,
       betting_seconds      INTEGER,
@@ -159,6 +164,7 @@ function migrate(db: DB) {
     "ALTER TABLE transactions ADD COLUMN note TEXT",
     "ALTER TABLE transactions ADD COLUMN owner_id INTEGER",
     "ALTER TABLE users ADD COLUMN can_host INTEGER NOT NULL DEFAULT 0",   // 房主权限（后台授予）
+    "ALTER TABLE users ADD COLUMN is_bot INTEGER NOT NULL DEFAULT 0",     // 托账号（机器人）
     "ALTER TABLE users ADD COLUMN max_rooms INTEGER NOT NULL DEFAULT 0",  // 最多同时开几间私人房   // 私房积分流水：所属房主；NULL = 大厅积分
   ]) {
     try { db.exec(sql); } catch (e: any) { if (!/duplicate column/i.test(e.message)) throw e; }

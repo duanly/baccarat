@@ -74,5 +74,7 @@ export const admin = {
   updateTable: (id: string, patch: Record<string, number | undefined>) => req<any>('PATCH', `/admin/tables/${id}`, patch),
   applyHall: (from: string, hallId: string) => req<{ updated: number }>('POST', '/admin/tables/apply-hall', { from, hallId }),
   rooms: () => req<{ active: number; total: number; items: any[] }>('GET', '/admin/rooms'),
+  bots: () => req<any>('GET', '/admin/bots'),
+  updateBots: (patch: Record<string, unknown>) => req<any>('PATCH', '/admin/bots', patch),
   roomMembers: (id: string) => req<{ items: RoomMember[] }>('GET', `/admin/rooms/${id}/members`),
 };
