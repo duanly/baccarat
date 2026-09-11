@@ -109,7 +109,11 @@ final class GameViewController: UIViewController {
     }
 
     @objc private func retry() { load() }
-    @objc private func appActive() { dispatchLifecycle("resumed") }
+    @objc private func appActive() {
+        // 回到前台时重新激活音频会话：切后台 / 来电后会话会被系统停用，不重新激活 Web Audio 就一直没声
+        try? AVAudioSession.sharedInstance().setActive(true)
+        dispatchLifecycle("resumed")
+    }
     @objc private func appInactive() { dispatchLifecycle("paused") }
 
     private func dispatchLifecycle(_ state: String) {

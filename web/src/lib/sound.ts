@@ -20,6 +20,7 @@ function ac(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   const AC = window.AudioContext || (window as any).webkitAudioContext;
   if (!AC) return null;
+  if (ctx && (ctx.state as string) === 'closed') { ctx = null; master = null; cachedNoise = null; }
   if (!ctx) {
     ctx = new AC();
     master = ctx.createGain();
@@ -38,15 +39,31 @@ function unlockNow() {
     const src = c.createBufferSource(); src.buffer = buf; src.connect(c.destination); src.start(0);
   } catch { /* ignore */ }
   void c.resume();
+  // iOS 从后台切回来后 AudioContext 常常卡在 interrupted/suspended，resume 也不生效：
+  // 等一小会儿仍不是 running，就把旧的关掉，下一次手势重新建一个新的
+  setTimeout(() => { if (ctx && ctx.state !== 'running') recreate(); }, 400);
+}
+/** 丢弃坏掉的 AudioContext（切后台 / 来电 / 拔耳机后可能再也起不来），下次调用 ac() 会新建 */
+function recreate() {
+  const old = ctx; ctx = null; master = null; cachedNoise = null;
+  try { void old?.close(); } catch { /* ignore */ }
 }
 let unlocked = false;
 export function unlockOnGesture() {
   if (unlocked) return;
   unlocked = true;
-  // 每次手势都尝试 resume：iOS 切后台 / 来电后 AudioContext 会变成 interrupted，需要再次手势恢复
   const h = () => unlockNow();
   for (const ev of ['touchstart', 'touchend', 'pointerdown', 'click', 'keydown']) window.addEventListener(ev, h, { passive: true });
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void ctx?.resume(); });
+  // 回到前台：先尝试 resume；若上下文已 interrupted，直接重建（新上下文在下一次触摸时解锁）
+  const onBack = () => {
+    if (!ctx) return;
+    if (ctx.state === 'running') return;
+    void ctx.resume();
+    setTimeout(() => { if (ctx && ctx.state !== 'running') recreate(); }, 500);
+  };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') onBack(); });
+  window.addEventListener('pageshow', onBack);
+  window.addEventListener('native:lifecycle', (e) => { if ((e as CustomEvent).detail === 'resumed') onBack(); });
 }
 
 export const sound = {
