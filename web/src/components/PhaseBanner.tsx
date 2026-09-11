@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { TablePhase } from '../lib/protocol';
 import { useCountdown } from '../lib/useCountdown';
+import { sound } from '../lib/sound';
 
 export function PhaseBanner({ phase, secs, roundId, nextRoundAt, countdownEndsAt }: { phase: TablePhase; secs: number; roundId: string | null; nextRoundAt: number | null; countdownEndsAt: number | null }) {
   const [banner, setBanner] = useState<'open' | 'close' | null>(null);
@@ -37,6 +38,14 @@ export function PhaseBanner({ phase, secs, roundId, nextRoundAt, countdownEndsAt
 
   const closing = phase === 'betting' && secs > 0 && secs <= 5;                 // 封盘倒计时（金色）
   const opening = phase === 'settling' && nextSecs > 0 && nextSecs <= 3;        // 开局倒计时（绿色）
+  // 倒计时滴答：每变一个数字响一声，最后 1 秒略高
+  const lastTick = useRef<string>('');
+  useEffect(() => {
+    const key = closing ? `c${secs}` : opening ? `o${nextSecs}` : '';
+    if (!key || key === lastTick.current) return;
+    lastTick.current = key;
+    sound.tick((closing ? secs : nextSecs) <= 1);
+  }, [closing, opening, secs, nextSecs]);
   const n = closing ? secs : nextSecs;
   const max = closing ? 5 : 3;
 

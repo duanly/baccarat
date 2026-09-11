@@ -17,6 +17,7 @@ import { native } from '../lib/native';
 import { useCountdown, PHASE_LABEL } from '../lib/useCountdown';
 import { useOrientation, useWide } from '../lib/useOrientation';
 import { chipSetFor, setChipSet, chipLabel } from '../lib/chips';
+import { sound, unlockOnGesture } from '../lib/sound';
 
 const MAIN: BetType[] = ['player', 'tie', 'banker'];
 // 边注：完美对子、幸运 7 已下架（服务端同样拒收）
@@ -57,7 +58,8 @@ export function TablePage() {
   const wide = useWide() || landscape;   // 手机横屏或桌面宽屏：右列放玩家列表 + 牌路
 
   // 进桌允许自由旋转，离桌回到竖屏
-  useEffect(() => { native.setOrientation('auto'); return () => native.setOrientation('portrait'); }, []);
+  useEffect(() => { native.setOrientation('auto'); unlockOnGesture(); return () => native.setOrientation('portrait'); }, []);
+  const [soundOn, setSoundOn] = useState(sound.enabled);
 
   const flash = useCallback((m: string) => { setToast(m); setTimeout(() => setToast(''), 2500); }, []);
 
@@ -82,6 +84,7 @@ export function TablePage() {
           });
           break;
         case 'table:card':
+          sound.card();
           if (kindRef.current === 'rng') setFlights((f) => [...f, { id: ++flightSeq.current, side: m.side, card: m.card }]);
           setTable((t) => t && ({
             ...t,
@@ -106,6 +109,7 @@ export function TablePage() {
           const net = (m.settlements as any[]).reduce((s, x) => s + x.net, 0);
           setLastSettle(net);
           setMySettlements(m.settlements);
+          if (net > 0) setTimeout(() => sound.cheer(), 300);   // 结算画面弹出时欢呼
           setTimeout(() => setLastSettle(null), 6000);
           break;
         }
@@ -140,6 +144,7 @@ export function TablePage() {
     const add = Math.min(chip, available);   // 不够一枚筹码 → 剩多少压多少（梭哈）
     if (add < chip) flash(`余额不足一枚筹码，已压上剩余 $${add.toLocaleString()}（梭哈）`);
     // 筹码从筹码栏飞到投注区，落地后再计入待确认注码
+    sound.chipPlace();
     const from = centerOf(document.querySelector('.chips .chip.sel'));
     const spot = document.querySelector(`.spot.${t}`);
     const to = centerOf(spot?.querySelector('.mine-wrap')) ?? centerOf(spot);
@@ -264,7 +269,8 @@ export function TablePage() {
       }
     }
     delay += 500;
-    // 2. 派出赢的筹码：牌盒 → 区域
+    // 2. 派出赢的筹码：牌盒 → 区域（伴随筹码碰撞声）
+    if (winners.size) setTimeout(() => sound.chipPay(6 + winners.size * 2), delay);
     for (const t of winners) {
       const spot = document.querySelector(`.spot.${t}`);
       const mineAmt = confirmed[t] ?? 0, othersAmt = others[t]?.amount ?? 0;
@@ -298,6 +304,7 @@ export function TablePage() {
         <div className="userbar">
           <span>{user?.nickname}</span>
           <span className="balance">$ {user?.balance.toLocaleString()}</span>
+          <button className={`ghost sound ${soundOn ? '' : 'off'}`} title="音效开关" onClick={() => setSoundOn(sound.toggle())}>{soundOn ? '音效' : '静音'}</button>
           <button className="ghost rotate" title="切换横竖屏" onClick={() => setOrientation(landscape ? 'portrait' : 'landscape')}>切屏</button>
         </div>
       </header>

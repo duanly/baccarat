@@ -941,3 +941,31 @@ html, body { overscroll-behavior: none; }
 .table-page.landscape .actions { grid-column: 7; grid-row: 1; margin: 0 0 0 4px; display: flex; justify-content: space-between; gap: 8px; }
 .table-page.landscape .actions button, .table-page.landscape .actions button.confirm { flex: 1 1 0; min-width: 0; padding: 0 6px; }
 .table-page.landscape .actions button.confirm { flex: 1.6 1 0; min-width: 0; }
+
+/* ==================================================================
+   下注桌布：区域之间无空隙（细线分隔）；闲 / 庄 占满整行，中间圆形"和"叠在上面，
+   闲的右边、庄的左边按圆弧挖空（横竖屏一致）
+   ================================================================== */
+.table-page .bet-grid { gap: 0; border-radius: 12px; overflow: hidden; background: rgba(0,0,0,.35); }
+.table-page .side-row { gap: 0; }
+.table-page .spot { border-radius: 0; border-width: 1px; border-color: rgba(255,255,255,.14); }
+.table-page .bet-area.open .spot { border-color: rgba(255,255,255,.22); }
+.table-page .main-row { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 0; container-type: size; }
+.table-page .main-row > .spot { --tie: min(92cqh, 34cqw); }
+.table-page .spot.player, .table-page .spot.banker { border-radius: 0; }
+.table-page .spot.player { -webkit-mask-image: radial-gradient(circle at 100% 50%, transparent calc(var(--tie) / 2 + 2px), #000 calc(var(--tie) / 2 + 3px)); mask-image: radial-gradient(circle at 100% 50%, transparent calc(var(--tie) / 2 + 2px), #000 calc(var(--tie) / 2 + 3px)); }
+.table-page .spot.banker { -webkit-mask-image: radial-gradient(circle at 0% 50%, transparent calc(var(--tie) / 2 + 2px), #000 calc(var(--tie) / 2 + 3px)); mask-image: radial-gradient(circle at 0% 50%, transparent calc(var(--tie) / 2 + 2px), #000 calc(var(--tie) / 2 + 3px)); }
+.table-page .spot.tie, .table-page.landscape .spot.tie { position: absolute; left: 50%; top: 50%; width: var(--tie); height: var(--tie); transform: translate(-50%, -50%); z-index: 2; border-radius: 50%; border-width: 2px; justify-self: auto; align-self: auto; }
+.table-page .bet-area.open .spot.tie:active { transform: translate(-50%, -50%) scale(.97); }
+.table-page .spot.player .spot-name { padding-right: calc(var(--tie) * .35); }
+.table-page .spot.banker .spot-name { padding-left: calc(var(--tie) * .35); }
+.table-page .spot.player .mine-wrap, .table-page .spot.player .spot-amount { left: calc(50% - var(--tie) * .18); }
+.table-page .spot.banker .mine-wrap, .table-page .spot.banker .spot-amount { left: calc(50% + var(--tie) * .18); }
+.table-page .spot.tie .others-wrap { left: 14%; bottom: 12%; }
+.table-page .help-btn { top: 2px; right: 4px; }
+.table-page.landscape .bet-grid, .table-page.portrait .bet-grid { gap: 0; }
+.table-page.landscape .side-row, .table-page.portrait .side-row { gap: 0; }
+.table-page.landscape .spot, .table-page.portrait .spot { border-radius: 0; }
+.table-page.landscape .spot.tie, .table-page.portrait .spot.tie { border-radius: 50%; }
+.userbar button.sound { padding: 4px 8px; font-size: 12px; }
+.userbar button.sound.off { color: var(--muted); text-decoration: line-through; }
