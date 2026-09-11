@@ -969,3 +969,11 @@ html, body { overscroll-behavior: none; }
 .table-page.landscape .spot.tie, .table-page.portrait .spot.tie { border-radius: 50%; }
 .userbar button.sound { padding: 4px 8px; font-size: 12px; }
 .userbar button.sound.off { color: var(--muted); text-decoration: line-through; }
+
+/* 竖屏：按钮行贴其所在下半区的上边沿 */
+.table-page.portrait .actions { align-self: start; margin-top: 2px; }
+/* 横屏：牌桌与下注布再缩 10%，让给筹码/按钮行 */
+.table-page.landscape { --chips-h: calc(60px + (var(--vh) - var(--top)) * 0.1); }
+.table-page.landscape .chips { align-items: center; }
+.table-page.landscape .chip { width: 48px; height: 48px; font-size: 14px; }
+.table-page.landscape .actions button, .table-page.landscape .actions button.confirm { height: 46px; font-size: 16px; }

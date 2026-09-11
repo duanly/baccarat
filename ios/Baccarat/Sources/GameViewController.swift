@@ -24,6 +24,9 @@ final class GameViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(red: 0.055, green: 0.10, blue: 0.078, alpha: 1)
+        // 音效：WKWebView 里的 Web Audio 默认跟随静音键；设为 playback 后静音键不再静音游戏音效（与其他游戏 App 一致）
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        try? AVAudioSession.sharedInstance().setActive(true)
 
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true                 // 荷官视频内联播放
