@@ -81,7 +81,7 @@ export function apiRouter(d: Deps): Router {
     const hall = d.tables.hallOf(t.cfg.id);
     if (hall && req.user!.vipLevel < hall.minVipLevel) throw new HttpError(403, `需要 VIP${hall.minVipLevel} 等级`);
     if (t.cfg.hallId === PRIVATE_HALL) d.rooms.assertCanEnter(t.cfg.id, req.user!.id);
-    res.json({ table: t.snapshot(), myBets: t.getBets(req.user!.id), room: t.cfg.hallId === PRIVATE_HALL ? d.rooms.info(t.cfg.id, req.user!.id) : null });   // room.credit = 我在本房可用的私房积分
+    res.json({ table: t.snapshot(), myBets: t.getBets(req.user!.id), room: t.cfg.hallId === PRIVATE_HALL ? d.rooms.info(t.cfg.id, req.user!.id) : null });
   });
 
   r.post('/tables/:id/bets', requireUser, (req, res) => {

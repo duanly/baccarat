@@ -81,8 +81,6 @@ export interface RoomInfo {
   id: string; name: string; ownerId: number; ownerName: string; isOwner: boolean; password?: string;
   locked: boolean; status: string; capacity: number; members: number; online: number; full: boolean; phase: TablePhase; roundNo: number;
   limits: { minBet: number; maxBet: number; maxSideBet: number }; createdAt: number;
-  /** 我在本房可用的私房积分（房主名下） */
-  credit: number;
 }
 export interface RoomMember {
   userId: number; nickname: string; username?: string; balance?: number; isOwner: boolean; joinedAt: number; online: boolean;

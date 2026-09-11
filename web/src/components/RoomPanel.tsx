@@ -12,7 +12,7 @@ const money = (n: number) => (n ?? 0).toLocaleString('zh-CN', { maximumFractionD
 const signed = (n: number) => (n > 0 ? '+' : '') + money(n);
 
 export function RoomPanel({ room: initial, onClose, onRoomChange, onBalance }: {
-  room: RoomInfo; onClose: () => void; onRoomChange: (r: RoomInfo) => void; onBalance?: (b: number, ownerCredit?: number) => void;
+  room: RoomInfo; onClose: () => void; onRoomChange: (r: RoomInfo) => void; onBalance?: (b: number) => void;
 }) {
   const [room, setRoom] = useState(initial);
   const [members, setMembers] = useState<RoomMember[]>([]);
@@ -38,7 +38,7 @@ export function RoomPanel({ room: initial, onClose, onRoomChange, onBalance }: {
     const v = Number(adjust.amount);
     if (!(v > 0)) throw new Error('请输入金额');
     const r = await api.roomTransfer(room.id, adjust.userId, sign * v);
-    onBalance?.(r.ownerBalance, adjust.userId === room.ownerId ? r.memberBalance : undefined);
+    onBalance?.(r.ownerBalance);
     setAdjust(null);
     native.vibrate();
   });
@@ -54,7 +54,7 @@ export function RoomPanel({ room: initial, onClose, onRoomChange, onBalance }: {
         <div className="help-head">
           <b>{room.name}</b>
           <span className="muted small">
-            房主 {room.ownerName} · {room.members}/{room.capacity} 人 · 在线 {room.online}{room.locked ? ' · 已上锁' : ''} · 我的私房积分 {money(room.credit)}
+            房主 {room.ownerName} · {room.members}/{room.capacity} 人 · 在线 {room.online}{room.locked ? ' · 已上锁' : ''}
           </span>
           <button className="help-close" onClick={onClose} aria-label="关闭">×</button>
         </div>
@@ -80,9 +80,6 @@ export function RoomPanel({ room: initial, onClose, onRoomChange, onBalance }: {
                 <button className="primary small-btn" disabled={busy} onClick={saveLimits}>保存</button>
                 <span className="muted small">下一局生效</span>
               </div>
-              <div className="room-row muted small">
-                积分规则：本房只能用你名下的私房积分下注。上分 = 你的大厅积分 → 成员的私房积分；下分 = 成员私房积分 → 你的大厅积分。你自己要在本房下注，也请先给自己上分。
-              </div>
               <div className="room-row">
                 <a className="ghost small-btn link-btn" href={api.roomLedgerUrl(room.id)} target="_blank" rel="noreferrer">导出账单 CSV</a>
                 <span className="muted small">本房累计流水 {money(totals.wagered)} · 玩家输赢 {signed(totals.net)}（正数=玩家赢）</span>
@@ -93,7 +90,7 @@ export function RoomPanel({ room: initial, onClose, onRoomChange, onBalance }: {
           )}
 
           <table className="tbl room-members">
-            <thead><tr><th>成员</th><th>状态</th><th>流水</th><th>输赢</th><th>局数</th>{room.isOwner && <><th>上分/下分</th><th>私房积分</th><th></th></>}</tr></thead>
+            <thead><tr><th>成员</th><th>状态</th><th>流水</th><th>输赢</th><th>局数</th>{room.isOwner && <><th>上分/下分</th><th>余额</th><th></th></>}</tr></thead>
             <tbody>
               {members.map((m) => (
                 <tr key={m.userId} className={m.isOwner ? 'owner' : ''}>
@@ -104,10 +101,10 @@ export function RoomPanel({ room: initial, onClose, onRoomChange, onBalance }: {
                   <td>{m.rounds}</td>
                   {room.isOwner && (
                     <>
-                      <td className="muted small">+{money(m.up)} / -{money(m.down)}</td>
+                      <td className="muted small">{m.isOwner ? '—' : `+${money(m.up)} / -${money(m.down)}`}</td>
                       <td>{money(m.balance ?? 0)}</td>
                       <td className="room-actions">
-                        {(adjust?.userId === m.userId
+                        {!m.isOwner && (adjust?.userId === m.userId
                           ? <span className="adjust-inline">
                               <input type="number" autoFocus placeholder="金额" value={adjust.amount} onChange={(e) => setAdjust({ userId: m.userId, amount: e.target.value })} />
                               <button className="primary small-btn" disabled={busy} onClick={() => doAdjust(1)}>上分</button>
@@ -115,8 +112,8 @@ export function RoomPanel({ room: initial, onClose, onRoomChange, onBalance }: {
                               <button className="ghost small-btn" onClick={() => setAdjust(null)}>取消</button>
                             </span>
                           : <>
-                              <button className="ghost small-btn" onClick={() => setAdjust({ userId: m.userId, amount: '' })}>{m.isOwner ? '给自己上下分' : '上下分'}</button>
-                              {!m.isOwner && <button className="ghost small-btn danger" onClick={() => kick(m)}>移除</button>}
+                              <button className="ghost small-btn" onClick={() => setAdjust({ userId: m.userId, amount: '' })}>上下分</button>
+                              <button className="ghost small-btn danger" onClick={() => kick(m)}>移除</button>
                             </>)}
                       </td>
                     </>
@@ -126,7 +123,7 @@ export function RoomPanel({ room: initial, onClose, onRoomChange, onBalance }: {
             </tbody>
           </table>
           <div className="muted small room-note">
-            私房积分只能在这位房主的房间里使用，退出房间后仍保留，下次进同一房主的房间继续用；要换回大厅积分请让房主下分。所有转账都记入双方流水，后台可查。人数上限 {room.capacity}，满员后新成员无法进入。
+            上分 = 从房主余额转给成员；下分 = 从成员余额转回房主，用的都是通用积分。所有转账都记入双方流水，后台可查。人数上限 {room.capacity}，满员后新成员无法进入。
           </div>
         </div>
       </div>

@@ -261,8 +261,7 @@ function PlayerDrawer({ id, groups, onClose, onChanged }: { id: number; groups: 
             <Kv k="总流水" v={fmtMoney(s.wagered)} sub={`正常房 ${fmtMoney(s.wageredPublic ?? 0)} · 私房 ${fmtMoney(s.wageredPrivate ?? 0)}`} />
             <Kv k="总输赢" v={fmtSigned(s.net)} tone={cls(s.net)} sub={`正常房 ${fmtSigned(s.netPublic ?? 0)} · 私房 ${fmtSigned(s.netPrivate ?? 0)}`} />
             <Kv k="私房局数 / 注数" v={`${s.roundsPrivate ?? 0} / ${s.betsPrivate ?? 0}`} sub={`收到上分 ${fmtMoney(s.roomTransferIn ?? 0)} · 被下分 ${fmtMoney(s.roomTransferOut ?? 0)}`} />
-            <Kv k="私房积分合计" v={fmtMoney(s.creditTotal ?? 0)} sub={(data.credits ?? []).map((c: any) => `${c.ownerName} ${fmtMoney(c.balance)}`).join(' · ') || '无'} />
-            <Kv k="作为房主发出 / 收回" v={`${fmtMoney(s.roomGiven ?? 0)} / ${fmtMoney(s.roomTaken ?? 0)}`} sub="大厅积分 ↔ 成员私房积分" />
+            <Kv k="作为房主发出 / 收回" v={`${fmtMoney(s.roomGiven ?? 0)} / ${fmtMoney(s.roomTaken ?? 0)}`} sub="给房间成员的上分 / 下分" />
             <Kv k="累计上分" v={fmtMoney(s.deposits)} sub={`${s.depositCount} 次`} />
             <Kv k="累计下分" v={fmtMoney(s.withdraws)} sub={`${s.withdrawCount} 次`} />
             <Kv k="上下分净额" v={fmtSigned(s.netDepositFlow)} sub="上分 − 下分" />

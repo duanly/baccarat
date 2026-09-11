@@ -33,6 +33,9 @@ export class SqlitePersistence implements Persistence {
 export class TableManager {
   halls: Hall[] = [];
   tables = new Map<string, BaccaratTable>();
+  /** 运行中新增牌桌（私人房）时的回调：WS 层用它给新桌挂事件广播 */
+  private addListeners: ((t: BaccaratTable) => void)[] = [];
+  onAdd(fn: (t: BaccaratTable) => void) { this.addListeners.push(fn); }
 
   constructor(private wallet: WalletPort, private store: Persistence) {}
 
@@ -46,6 +49,7 @@ export class TableManager {
     const t = new BaccaratTable(cfg, wallet, this.store);
     this.tables.set(t.cfg.id, t);
     this.halls.find((h) => h.id === cfg.hallId)?.tableIds.push(t.cfg.id);
+    for (const fn of this.addListeners) fn(t);
     return t;
   }
 

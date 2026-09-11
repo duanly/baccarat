@@ -352,7 +352,7 @@ export class BaccaratTable extends EventEmitter {
     const cur = this.bets.get(userId) ?? {};
     let total = 0;
     let remaining = this.wallet.balance(userId);
-    if (remaining <= 0) throw new Error(this.cfg.ownerId ? '私房积分不足，请找房主上分' : '余额不足');
+    if (remaining <= 0) throw new Error('余额不足');
     let allIn = false;
     const merged: Bets = { ...cur };
     for (const [t, raw] of Object.entries(add) as [BetType, number][]) {

@@ -1,11 +1,11 @@
 /**
- * 私人房间：VIP 玩家创建，其他玩家凭密码进入；房主可管理成员、上下分（房主与成员之间转账）、限红、上锁、账单导出。
+ * 私人房间：有开房权限的玩家创建，其他玩家凭密码进入；房主可管理成员、上下分（房主与成员之间转账，通用积分）、限红、上锁、账单导出。
  * 每个房间就是一张 RNG 牌桌（id = room-xxxxxx，hallId = 'private'），人数上限 12。
  */
 import { randomBytes } from 'node:crypto';
 import type { DB } from './db/index.js';
 import { HttpError } from './auth.js';
-import { RoomCreditWallet, type Wallet } from './wallet.js';
+import type { Wallet } from './wallet.js';
 import type { TableManager } from './game/manager.js';
 import { DEFAULT_PAYOUTS, round2 } from './game/payouts.js';
 
@@ -31,19 +31,14 @@ export class RoomService {
 
   private mount(r: RoomRow) {
     if (this.tables.tables.has(r.id)) return this.tables.get(r.id);
-    // 私人房用房主名下的私房积分结算（与大厅积分隔离）
+    // 私人房与大厅共用同一套积分；只是统计上按 table_id 前缀 room- 单独分列
     const t = this.tables.addTable({
       id: r.id, name: r.name, kind: 'rng', hallId: PRIVATE_HALL, ownerId: r.owner_id, capacity: r.capacity,
       minBet: r.min_bet, maxBet: r.max_bet, maxSideBet: r.max_side_bet, payouts: DEFAULT_PAYOUTS, bettingSeconds: 15,
-    }, this.credits(r.owner_id));
+    });
     t.start();
     return t;
   }
-
-  credits(ownerId: number) { return new RoomCreditWallet(this.db, ownerId); }
-
-  /** 某玩家在本房可用的私房积分 */
-  creditBalance(roomId: string, userId: number): number { return this.credits(this.row(roomId).owner_id).balance(userId); }
 
   row(id: string): RoomRow {
     const r = this.db.prepare('SELECT * FROM rooms WHERE id = ?').get(id) as RoomRow | undefined;
@@ -119,7 +114,6 @@ export class RoomService {
       locked: !!r.locked, status: r.status, capacity: r.capacity, members,
       online: t?.snapshot().playersOnline ?? 0, full: t?.isFull ?? false, phase: t?.phase ?? 'idle', roundNo: t?.roundNo ?? 0,
       limits: { minBet: r.min_bet, maxBet: r.max_bet, maxSideBet: r.max_side_bet }, createdAt: r.created_at,
-      credit: this.credits(r.owner_id).balance(viewerId),   // 我在本房可用的私房积分
     };
   }
 
@@ -153,26 +147,21 @@ export class RoomService {
     return this.info(id, userId);
   }
 
-  /**
-   * 房主上分（amount>0）：房主大厅积分 → 成员在该房主名下的私房积分
-   * 房主下分（amount<0）：成员私房积分 → 房主大厅积分
-   * 房主也可以给自己转（memberId = ownerId）：把大厅积分转成自己的私房积分，用于在自己房间下注
-   */
+  /** 房主给成员上分（amount>0：房主 → 成员）/ 下分（amount<0：成员 → 房主），都是同一套通用积分的转账 */
   transfer(id: string, ownerId: number, memberId: number, amount: number, note?: string) {
     this.assertOwner(id, ownerId);
-    if (!this.isMember(id, memberId)) throw new HttpError(400, '对方不是本房成员');
+    if (!this.isMember(id, memberId) || memberId === ownerId) throw new HttpError(400, '对方不是本房成员');
     const v = round2(Math.abs(Number(amount)));
     if (!(v > 0)) throw new HttpError(400, '金额无效');
-    const credit = this.credits(ownerId);
     const ref = `${id}:${amount > 0 ? 'up' : 'down'}:${memberId}`;
     if (amount > 0) {
-      this.wallet.apply(ownerId, 'transfer', -v, ref, { operatorId: ownerId, note: note ?? `私房上分 → ${memberId}` });   // 大厅积分不足会抛错
-      credit.apply(memberId, 'transfer', v, ref, { operatorId: ownerId, note: note ?? '房主上分' });
+      this.wallet.apply(ownerId, 'transfer', -v, ref, { operatorId: ownerId, note: note ?? `房间上分 → ${memberId}` });   // 房主余额不足会抛错
+      this.wallet.apply(memberId, 'transfer', v, ref, { operatorId: ownerId, note: note ?? '房主上分' });
     } else {
-      credit.apply(memberId, 'transfer', -v, ref, { operatorId: ownerId, note: note ?? '房主下分' });                    // 私房积分不足会抛错
-      this.wallet.apply(ownerId, 'transfer', v, ref, { operatorId: ownerId, note: note ?? `私房下分 ← ${memberId}` });
+      this.wallet.apply(memberId, 'transfer', -v, ref, { operatorId: ownerId, note: note ?? '房主下分' });                 // 成员余额不足会抛错
+      this.wallet.apply(ownerId, 'transfer', v, ref, { operatorId: ownerId, note: note ?? `房间下分 ← ${memberId}` });
     }
-    return { ownerBalance: this.wallet.balance(ownerId), memberBalance: credit.balance(memberId), ownerCredit: credit.balance(ownerId) };
+    return { ownerBalance: this.wallet.balance(ownerId), memberBalance: this.wallet.balance(memberId) };
   }
 
   kick(id: string, ownerId: number, memberId: number) {
@@ -188,18 +177,17 @@ export class RoomService {
     if (!this.isMember(id, viewerId)) throw new HttpError(403, '不是本房成员');
     const t = this.tables.tables.get(id);
     const onlineIds = new Set((t?.snapshot().leaderboard ?? []).map((x: any) => x.userId));
-    const rows = this.db.prepare(`SELECT u.id, u.nickname, u.username, COALESCE(c.balance, 0) AS balance, m.joined_at,
+    const rows = this.db.prepare(`SELECT u.id, u.nickname, u.username, u.balance, m.joined_at,
         COALESCE(b.wagered,0) AS wagered, COALESCE(b.net,0) AS net, COALESCE(b.rounds,0) AS rounds,
         COALESCE(tr.up,0) AS up, COALESCE(tr.down,0) AS down
       FROM room_members m JOIN users u ON u.id = m.user_id
-      LEFT JOIN room_credits c ON c.user_id = u.id AND c.owner_id = ?
       LEFT JOIN (SELECT user_id, SUM(amount) AS wagered, SUM(net) AS net, COUNT(DISTINCT round_id) AS rounds FROM bets WHERE table_id = ? GROUP BY user_id) b ON b.user_id = u.id
       LEFT JOIN (SELECT user_id, SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) AS up, SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END) AS down
-                 FROM transactions WHERE kind = 'transfer' AND owner_id IS NOT NULL AND ref LIKE ? GROUP BY user_id) tr ON tr.user_id = u.id
-      WHERE m.room_id = ? ORDER BY (u.id = ?) DESC, wagered DESC`).all(r.owner_id, id, `${id}:%`, id, r.owner_id) as any[];
+                 FROM transactions WHERE kind = 'transfer' AND ref LIKE ? GROUP BY user_id) tr ON tr.user_id = u.id
+      WHERE m.room_id = ? ORDER BY (u.id = ?) DESC, wagered DESC`).all(id, `${id}:%`, id, r.owner_id) as any[];
     const isOwner = r.owner_id === viewerId;
     return rows.map((x) => ({
-      userId: x.id, nickname: x.nickname, username: isOwner ? x.username : undefined, balance: isOwner || x.id === viewerId ? x.balance : undefined,
+      userId: x.id, nickname: x.nickname, username: isOwner ? x.username : undefined, balance: isOwner ? x.balance : undefined,
       isOwner: x.id === r.owner_id, joinedAt: x.joined_at, online: onlineIds.has(x.id) || (t ? (t as any).online?.has?.(x.id) : false),
       wagered: x.wagered, net: x.net, rounds: x.rounds, up: x.up, down: x.down,
     }));

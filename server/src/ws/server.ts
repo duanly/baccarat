@@ -35,9 +35,6 @@ interface Client {
   ua: string;
 }
 
-/** 结算 / 下注回执里的 balance 属于哪套积分：私人房 = 房主名下私房积分，其它 = 大厅积分 */
-const walletKind = (t: { cfg: { hallId: string } }) => (t.cfg.hallId === 'private' ? 'room' : 'main');
-
 export function attachWs(server: Server, auth: AuthService, tables: TableManager, presence: Presence, rooms?: import('../rooms.js').RoomService) {
   const wss = new WebSocketServer({ server, path: '/ws' });
   const clients = new Set<Client>();
@@ -45,6 +42,7 @@ export function attachWs(server: Server, auth: AuthService, tables: TableManager
 
   // 牌桌事件 → 广播给订阅者
   for (const t of tables.tables.values()) wire(t);
+  tables.onAdd(wire);   // 运行中创建的私人房间也要挂上广播
 
   function wire(t: BaccaratTable) {
     const id = t.cfg.id;
@@ -57,7 +55,7 @@ export function attachWs(server: Server, auth: AuthService, tables: TableManager
     t.on('result', (e) => broadcast({ type: 'table:result', ...e }));
     t.on('bets', (e) => broadcast({ type: 'table:bets', ...e }));
     t.on('settled', (e) => {
-      for (const c of clients) if (c.user?.id === e.userId) send(c.ws, { type: 'settled', ...e, walletKind: walletKind(t) });
+      for (const c of clients) if (c.user?.id === e.userId) send(c.ws, { type: 'settled', ...e });
     });
   }
 
@@ -120,18 +118,18 @@ export function attachWs(server: Server, auth: AuthService, tables: TableManager
         if (!c.user) throw new Error('未登录');
         const t = tables.get(msg.tableId);
         const r = t.placeBets(c.user.id, c.user.nickname, msg.bets ?? {});
-        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, ...r, walletKind: walletKind(t) });
+        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, ...r });
       }
       case 'clearBet': {
         if (!c.user) throw new Error('未登录');
         const t = tables.get(msg.tableId);
         const r = t.clearBet(c.user.id, msg.betType);
-        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, bets: r.bets, balance: r.balance, walletKind: walletKind(t) });
+        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, bets: r.bets, balance: r.balance });
       }
       case 'clearBets': {
         if (!c.user) throw new Error('未登录');
         const t = tables.get(msg.tableId);
-        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, bets: {}, balance: t.clearBets(c.user.id), walletKind: walletKind(t) });
+        return send(c.ws, { type: 'bet:ok', tableId: t.cfg.id, bets: {}, balance: t.clearBets(c.user.id) });
       }
       default:
         throw new Error(`unknown message type ${msg.type}`);

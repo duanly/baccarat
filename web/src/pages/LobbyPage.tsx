@@ -115,7 +115,7 @@ function RoomsSection({ canHost, maxRooms }: { canHost: boolean; maxRooms: numbe
 
   return (
     <section className="hall rooms-hall">
-      <div className="hall-head"><h2>密码房</h2><span className="muted">凭密码进入私人房间 · 每房最多 12 人 · 房内只能用房主给的私房积分下注</span></div>
+      <div className="hall-head"><h2>密码房</h2><span className="muted">凭密码进入私人房间 · 每房最多 12 人</span></div>
       {err && <div className="error" onClick={() => setErr('')}>{err}</div>}
       <div className="room-join">
         <input placeholder="输入房间密码" value={pwd} onChange={(e) => setPwd(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && join()} maxLength={8} autoCapitalize="off" autoCorrect="off" />
@@ -147,7 +147,6 @@ function RoomsSection({ canHost, maxRooms }: { canHost: boolean; maxRooms: numbe
                     <span className={r.full ? 'full' : ''}>👤 {r.online}/{r.capacity}{r.full ? ' 满房' : ''}</span>
                     <span>{r.locked ? '🔒 已上锁' : '开放'}</span>
                     {r.isOwner && <span className="gold">密码 {r.password}</span>}
-                    <span className="gold">私房积分 {r.credit.toLocaleString()}</span>
                   </div>
                 </div>
               </Link>

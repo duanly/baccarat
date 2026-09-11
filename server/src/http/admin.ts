@@ -187,15 +187,13 @@ export function adminRouter(d: Deps): Router {
         COALESCE(SUM(CASE WHEN table_id NOT LIKE 'room-%' THEN amount ELSE 0 END),0) AS wageredPublic, COALESCE(SUM(CASE WHEN table_id NOT LIKE 'room-%' THEN net ELSE 0 END),0) AS netPublic,
         COALESCE(SUM(CASE WHEN table_id NOT LIKE 'room-%' THEN 1 ELSE 0 END),0) AS betsPublic, COUNT(DISTINCT CASE WHEN table_id NOT LIKE 'room-%' THEN round_id END) AS roundsPublic
         FROM bets WHERE user_id = ?`).get(id) as any;
-    // 私房积分：作为成员收到 / 退回的（owner_id 非空）；作为房主从大厅积分转出 / 收回的（owner_id 为空）
+    // 私人房上下分（房主 ↔ 成员的转账）：作为成员收到 / 被收回；作为房主发出 / 收回（按 ref 前缀 room- 与 operator 区分）
     const roomTransfers = d.db.prepare(`SELECT
-        COALESCE(SUM(CASE WHEN owner_id IS NOT NULL AND amount > 0 THEN amount ELSE 0 END),0) AS inAmt,
-        COALESCE(SUM(CASE WHEN owner_id IS NOT NULL AND amount < 0 THEN -amount ELSE 0 END),0) AS outAmt,
-        COALESCE(SUM(CASE WHEN owner_id IS NULL AND amount < 0 THEN -amount ELSE 0 END),0) AS givenAmt,
-        COALESCE(SUM(CASE WHEN owner_id IS NULL AND amount > 0 THEN amount ELSE 0 END),0) AS takenAmt
-        FROM transactions WHERE user_id = ? AND kind = 'transfer'`).get(id) as any;
-    const creditTotal = (d.db.prepare('SELECT COALESCE(SUM(balance),0) AS n FROM room_credits WHERE user_id = ?').get(id) as any).n;
-    const credits = d.db.prepare('SELECT c.owner_id AS ownerId, u.nickname AS ownerName, c.balance FROM room_credits c JOIN users u ON u.id = c.owner_id WHERE c.user_id = ? AND c.balance <> 0 ORDER BY c.balance DESC').all(id);
+        COALESCE(SUM(CASE WHEN operator_id <> user_id AND amount > 0 THEN amount ELSE 0 END),0) AS inAmt,
+        COALESCE(SUM(CASE WHEN operator_id <> user_id AND amount < 0 THEN -amount ELSE 0 END),0) AS outAmt,
+        COALESCE(SUM(CASE WHEN operator_id = user_id AND amount < 0 THEN -amount ELSE 0 END),0) AS givenAmt,
+        COALESCE(SUM(CASE WHEN operator_id = user_id AND amount > 0 THEN amount ELSE 0 END),0) AS takenAmt
+        FROM transactions WHERE user_id = ? AND kind = 'transfer' AND ref LIKE 'room-%'`).get(id) as any;
     const daily = d.db.prepare(`SELECT date(created_at/1000, 'unixepoch', 'localtime') AS day, COUNT(*) AS bets, SUM(amount) AS wagered, SUM(net) AS net
         FROM bets WHERE user_id = ? GROUP BY day ORDER BY day DESC LIMIT 30`).all(id);
     const onlineMs = u.total_online_ms + d.presence.liveMs(id);
@@ -212,9 +210,8 @@ export function adminRouter(d: Deps): Router {
         activeDays,
         onlineMs,
         netDepositFlow: round2(t.deposits - t.withdraws),   // 上下分净额
-        ...split, roomTransferIn: roomTransfers.inAmt, roomTransferOut: roomTransfers.outAmt, roomGiven: roomTransfers.givenAmt, roomTaken: roomTransfers.takenAmt, creditTotal,
+        ...split, roomTransferIn: roomTransfers.inAmt, roomTransferOut: roomTransfers.outAmt, roomGiven: roomTransfers.givenAmt, roomTaken: roomTransfers.takenAmt,
       },
-      credits,
       byType, daily,
       current: d.presence.current(id) ?? null,
     });
