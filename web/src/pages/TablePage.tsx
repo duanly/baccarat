@@ -405,7 +405,7 @@ export function TablePage() {
           <div className="actions">
             <button onClick={undoLast} disabled={!betting || total(shown) === 0} className="ghost">撤注</button>
             <button onClick={submit} disabled={!betting || total(pending) === 0} className={`primary confirm ${total(pending) > 0 ? 'pulse' : ''} ${pendingAllIn ? 'allin' : ''}`}>
-              {pendingAllIn ? `梭哈 $${total(pending).toLocaleString()}` : `确认 $${total(pending).toLocaleString()}`}
+              {pendingAllIn ? `梭哈 ${total(pending).toLocaleString()}` : `确认 ${total(pending).toLocaleString()}`}
             </button>
             <button onClick={rebet} disabled={!betting || !lastBets} className="ghost">重复</button>
           </div>
