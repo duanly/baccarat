@@ -3,6 +3,7 @@
  *
  *  card()      发牌：一声短促的"唰"（带通噪声 + 快速衰减）
  *  chipPlace(vol) 押注：筹码推上桌的清脆一声（高频敲击 + 轻微滑动）；别人下注时以较轻音量播放
+ *  chipPick(t)  切换筹码：从筹码栏拈起一枚的轻脆一声；t=0~1（面额由小到大）音高略降，大额更沉
  *  confirm()   确认下注：咔 + 上扬双音
  *  chipBack()  撤注：筹码收回（下行两声）
  *  chipPay(n)  派彩：一串陶瓷筹码碰撞声（多枚随机音高的短促叮声）
@@ -136,6 +137,25 @@ export const sound = {
     const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3000;
     const g = c.createGain(); g.gain.setValueAtTime(0.08 * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
     src.connect(hp).connect(g).connect(master!); src.start(t); src.stop(t + 0.1);
+  },
+
+  /**
+   * 切换筹码面额：从筹码栏拈起一枚的感觉——很短的一记脆响 + 极轻的指甲刮擦。
+   * 比 chipPlace 轻得多、也短得多，连点几下不会吵。
+   * tone：0（最小面额）~ 1（最大面额），面额越大音高越低、尾音略长，听感上更"重"。
+   */
+  chipPick(tone = 0.5) {
+    const c = ac(); if (!c || !enabled) return;
+    const t = c.currentTime;
+    const k = Math.max(0, Math.min(1, tone));
+    const freq = 3400 - k * 1100;          // 小面额清亮、大面额沉一些
+    const dur = 0.05 + k * 0.03;
+    clink(c, t, freq, 0.22, dur);
+    // 指甲刮过筹码边缘的细噪声
+    const src = c.createBufferSource(); src.buffer = noiseBuffer(c, 0.04);
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 6000;
+    const g = c.createGain(); g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+    src.connect(hp).connect(g).connect(master!); src.start(t); src.stop(t + 0.05);
   },
 
   /** 确认下注：一声干脆的"咔"+ 短促上扬双音（注码已锁定的感觉） */
