@@ -360,7 +360,8 @@ export class BaccaratTable extends EventEmitter {
       if (DISABLED_BETS.has(t)) throw new Error(`「${BET_NAMES[t] ?? t}」暂未开放`);
       if (!(raw > 0) || !Number.isFinite(raw)) throw new Error('投注金额无效');
       let v = raw;
-      if (v > remaining) { v = round2(remaining); allIn = true; }   // 剩多少压多少
+      // 梭哈：剩多少压多少，但只压整数部分（余额里的小数留着，否则注码小数位会越滚越长）
+      if (v > remaining) { v = Math.floor(remaining); allIn = true; }
       if (v <= 0) continue;
       remaining = round2(remaining - v);
       const next = round2((merged[t] ?? 0) + v);
@@ -370,6 +371,7 @@ export class BaccaratTable extends EventEmitter {
       merged[t] = next;
       total = round2(total + v);
     }
+    if (total <= 0) throw new Error('余额不足');
     if (total < this.cfg.minBet && sumBets(cur) === 0) throw new Error(`最低投注 ${this.cfg.minBet}`);
     // 庄/闲互斥（多数平台禁止同局对冲）
     if (merged.player && merged.banker) throw new Error('庄闲不可同时投注');

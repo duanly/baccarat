@@ -150,7 +150,7 @@ a.ghost { color: var(--muted); text-decoration: none; padding: 6px 10px; }
 .chip { aspect-ratio: 1; border-radius: 50%; font-weight: 800; border: 4px dashed rgba(255,255,255,.7); color: #fff; }
 .chip.sel { outline: 3px solid var(--gold); outline-offset: 2px; }
 /* 筹码颜色：按面额固定（所有桌子一致），见 lib/chips.ts */
-.actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 6px; }
+.actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 6px; }   /* 撤注 · 确认 · 重复 */
 .chips .muted { grid-column: 1 / -1; }
 
 /* 牌路 */

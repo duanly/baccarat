@@ -164,8 +164,8 @@ export function TablePage() {
   const betting = table?.phase === 'betting' && secs > 0;
   const total = (b: Bets) => Object.values(b).reduce((s, v) => s + (v ?? 0), 0);
 
-  // 可用余额 = 账户余额（已确认注码已扣） - 待确认注码
-  const available = Math.max(0, (user?.balance ?? 0) - total(pending));
+  // 可用余额 = 账户余额（已确认注码已扣） - 待确认注码；向下取整，梭哈时不把余额里的小数压进去
+  const available = Math.max(0, Math.floor((user?.balance ?? 0) - total(pending)));
   const pendingAllIn = total(pending) > 0 && available <= 0;
 
   const addChip = (t: BetType) => {
@@ -405,7 +405,7 @@ export function TablePage() {
           <div className="actions">
             <button onClick={undoLast} disabled={!betting || total(shown) === 0} className="ghost">撤注</button>
             <button onClick={submit} disabled={!betting || total(pending) === 0} className={`primary confirm ${total(pending) > 0 ? 'pulse' : ''} ${pendingAllIn ? 'allin' : ''}`}>
-              {pendingAllIn ? `梭哈 ${total(pending).toLocaleString()}` : `确认 ${total(pending).toLocaleString()}`}
+              {pendingAllIn ? `梭哈 $${total(pending).toLocaleString()}` : `确认 $${total(pending).toLocaleString()}`}
             </button>
             <button onClick={rebet} disabled={!betting || !lastBets} className="ghost">重复</button>
           </div>
