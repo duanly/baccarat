@@ -403,11 +403,11 @@ export function TablePage() {
         <div className="chips">
           {CHIPS.map((c) => <button key={c} className={`chip c${c} ${chip === c ? 'sel' : ''}`} onClick={() => setChip(c)}>{chipLabel(c)}</button>)}
           <div className="actions">
-            <button onClick={undoLast} disabled={!betting || total(shown) === 0} className="ghost">撤注</button>
+            <button onClick={rebet} disabled={!betting || !lastBets} className="ghost">重复</button>
             <button onClick={submit} disabled={!betting || total(pending) === 0} className={`primary confirm ${total(pending) > 0 ? 'pulse' : ''} ${pendingAllIn ? 'allin' : ''}`}>
               {pendingAllIn ? `梭哈 $${total(pending).toLocaleString()}` : `确认 $${total(pending).toLocaleString()}`}
             </button>
-            <button onClick={rebet} disabled={!betting || !lastBets} className="ghost">重复</button>
+            <button onClick={undoLast} disabled={!betting || total(shown) === 0} className="ghost">撤注</button>
           </div>
           <div className={`bet-hint ${total(pending) > 0 ? 'active' : ''}`}>
             {total(pending) > 0
