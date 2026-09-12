@@ -150,7 +150,7 @@ a.ghost { color: var(--muted); text-decoration: none; padding: 6px 10px; }
 .chip { aspect-ratio: 1; border-radius: 50%; font-weight: 800; border: 4px dashed rgba(255,255,255,.7); color: #fff; }
 .chip.sel { outline: 3px solid var(--gold); outline-offset: 2px; }
 /* 筹码颜色：按面额固定（所有桌子一致），见 lib/chips.ts */
-.actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 6px; }   /* 撤注 · 确认 · 重复 */
+.actions { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr); gap: 6px; }   /* 撤注 · 确认 · 重复；minmax(0,..) 防止长文字把列撑开 */
 .chips .muted { grid-column: 1 / -1; }
 
 /* 牌路 */
@@ -401,7 +401,7 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 .table-page .spot.main-spot .spot-name { font-size: clamp(22px, 4.2vh, 34px); }
 .table-page .chips { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: auto auto auto; gap: 4px 6px; align-content: center; }
 .table-page .chip { aspect-ratio: 1; max-height: 7vh; width: auto; margin: 0 auto; padding: 0; font-size: clamp(11px, 1.8vh, 15px); }
-.table-page .actions { grid-column: 1 / -1; grid-template-columns: 1fr 1.6fr 1fr; gap: 6px; }
+.table-page .actions { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr); gap: 6px; }
 .table-page .actions button { padding: 5px 8px; font-size: 13px; }
 .table-page .bet-hint { grid-column: 1 / -1; min-height: 14px; font-size: 11px; }
 .table-page .scene { min-height: 0; }
@@ -622,7 +622,7 @@ button.danger { border-color: #7a2a2a; color: #ffb4b4; }
 /* ---------- 筹码：横竖屏同一尺寸；选中的抬高 + 金色亮边 ---------- */
 .table-page .chips, .table-page.landscape .chips { display: flex; align-items: flex-end; gap: 6px; padding: 6px 2px 2px; overflow: visible; }
 .table-page.portrait .chips { flex-wrap: wrap; justify-content: space-between; align-content: center; }
-.table-page.portrait .actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 6px; margin-top: 4px; }
+.table-page.portrait .actions { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr); gap: 6px; margin-top: 4px; }
 .table-page .chip, .table-page.landscape .chip, .table-page.portrait .chip {
   flex: 0 0 auto; width: 38px; height: 38px; max-height: none; margin: 0; font-size: 11px; border-width: 2px;
   transition: transform .18s cubic-bezier(.2,.8,.3,1.4), box-shadow .18s, outline-color .18s; outline: 2px solid transparent; outline-offset: 1px;
@@ -741,7 +741,7 @@ tr.dirty td { background: rgba(212,175,55,.08); }
 .table-page.landscape .spot-name { font-size: min(26cqw, 58cqh); } .table-page.landscape .spot.main-spot .spot-name { font-size: min(34cqw, 62cqh); }
 .table-page.landscape .chips { flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px; padding: 8px 2px 0; overflow: visible; max-width: none; }
 .table-page.landscape .chip { flex: 0 0 38px; width: 38px; height: 38px; min-width: 0; }
-.table-page.landscape .actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr 1.6fr; gap: 6px; margin: 4px 0 0; flex: none; max-width: none; align-self: auto; }
+.table-page.landscape .actions { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr); gap: 6px; margin: 4px 0 0; flex: none; max-width: none; align-self: auto; }
 .table-page.landscape .actions button, .table-page.landscape .actions button.confirm { width: auto; flex: none; height: 32px; font-size: 13px; padding: 0 6px; }
 .table-page.landscape .help-btn { top: 2px; right: 2px; }
 .table-page.landscape .side { grid-column: 1 / -1; grid-row: 3; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin: 2px 0 calc(12px + env(safe-area-inset-bottom)); min-height: 0; }
@@ -1080,3 +1080,6 @@ button.danger, .small-btn.danger { color: #ffb4b4; border-color: rgba(255,120,12
 
 /* 断线提示 */
 .net-badge { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 70; padding: 5px 12px; border-radius: 999px; background: rgba(90, 30, 30, .95); border: 1px solid #c0503f; color: #ffd0c8; font-size: 12px; font-weight: 600; animation: notice-in .25s ease-out; }
+
+/* 三个操作按钮：撤注 · 确认 · 重复；确认居中且最宽，文字过长时自行收缩而不是撑开相邻列 */
+.actions button { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

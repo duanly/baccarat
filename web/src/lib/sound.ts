@@ -49,6 +49,37 @@ function recreate() {
   const old = ctx; ctx = null; master = null; cachedNoise = null;
   try { void old?.close(); } catch { /* ignore */ }
 }
+
+/**
+ * 音频健康检查（壳 App 每隔几秒调一次，页面自己也定时调）：
+ * iOS 把 App 切到后台后，WKWebView 里的 AudioContext 常常卡在 interrupted/suspended，
+ * resume() 也救不回来——只能整个丢掉重建。壳已经把 mediaTypesRequiringUserActionForPlayback
+ * 设为空，新建的 context 不需要再等一次用户手势，所以这里可以直接自愈。
+ * 返回当前状态字符串（'running' / 'suspended' / 'interrupted' / 'none'），壳据此决定要不要重新激活 AVAudioSession。
+ */
+let lastRepair = 0;
+export function ensureAudio(): string {
+  if (!enabled) return 'off';
+  const c = ac();
+  if (!c) return 'none';
+  const st = String(c.state);
+  if (st === 'running') return 'running';
+  void c.resume();
+  // interrupted 基本没救；suspended 给一次 resume 的机会，1.5s 后还没起来就重建
+  if (st === 'interrupted' || Date.now() - lastRepair > 1500) {
+    lastRepair = Date.now();
+    recreate();
+    const n = ac();
+    if (!n) return 'none';
+    try {
+      const buf = n.createBuffer(1, 1, n.sampleRate);
+      const src = n.createBufferSource(); src.buffer = buf; src.connect(n.destination); src.start(0);
+    } catch { /* ignore */ }
+    void n.resume();
+    return String(n.state);
+  }
+  return String(c.state);
+}
 let unlocked = false;
 export function unlockOnGesture() {
   if (unlocked) return;
@@ -65,6 +96,14 @@ export function unlockOnGesture() {
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') onBack(); });
   window.addEventListener('pageshow', onBack);
   window.addEventListener('native:lifecycle', (e) => { if ((e as CustomEvent).detail === 'resumed') onBack(); });
+
+  // 壳 App 的音频看门狗入口（Swift 侧每 3 秒 evaluateJavaScript 调一次）
+  (window as any).__audio = {
+    ensure: ensureAudio,
+    state: () => (ctx ? String(ctx.state) : 'none'),
+  };
+  // 页面自己也定时自检（浏览器 / 安卓壳同样受益）；后台不跑，省电
+  setInterval(() => { if (enabled && document.visibilityState === 'visible') ensureAudio(); }, 5000);
 }
 
 export const sound = {

@@ -25,8 +25,7 @@ final class GameViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = UIColor(red: 0.055, green: 0.10, blue: 0.078, alpha: 1)
         // 音效：WKWebView 里的 Web Audio 默认跟随静音键；设为 playback 后静音键不再静音游戏音效（与其他游戏 App 一致）
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
-        try? AVAudioSession.sharedInstance().setActive(true)
+        activateAudioSession()
 
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true                 // 荷官视频内联播放
@@ -74,6 +73,10 @@ final class GameViewController: UIViewController {
 
         NotificationCenter.default.addObserver(self, selector: #selector(appActive), name: UIApplication.didBecomeActiveNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(appInactive), name: UIApplication.willResignActiveNotification, object: nil)
+        // 音频会话被打断（来电 / 闹钟 / 其他 App 抢占）和音频服务重启：都要重新激活，否则切回来就没声音
+        NotificationCenter.default.addObserver(self, selector: #selector(audioInterruption(_:)), name: AVAudioSession.interruptionNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(mediaServicesReset), name: AVAudioSession.mediaServicesWereResetNotification, object: nil)
+        startAudioWatchdog()
         load()
     }
 
@@ -111,13 +114,77 @@ final class GameViewController: UIViewController {
     @objc private func retry() { load() }
     @objc private func appActive() {
         // 回到前台时重新激活音频会话：切后台 / 来电后会话会被系统停用，不重新激活 Web Audio 就一直没声
-        try? AVAudioSession.sharedInstance().setActive(true)
+        activateAudioSession()
         dispatchLifecycle("resumed")
+        startAudioWatchdog()
+        // 网页恢复也需要一点时间，隔一会儿再查一次
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.checkAudio() }
     }
-    @objc private func appInactive() { dispatchLifecycle("paused") }
+    @objc private func appInactive() {
+        dispatchLifecycle("paused")
+        stopAudioWatchdog()
+    }
 
     private func dispatchLifecycle(_ state: String) {
         webView?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('native:lifecycle',{detail:'\(state)'}))")
+    }
+
+    // MARK: - 音频看门狗
+    //
+    // iOS 把 App 切到后台后，WKWebView 里的 Web Audio 上下文常常卡在 interrupted/suspended，
+    // 光靠网页自己 resume() 救不回来，表现就是「切出去再回来就没音效，必须重启 App」。
+    // 这里在前台每 3 秒问一次网页音频状态：不是 running 就重新激活 AVAudioSession，
+    // 网页侧的 window.__audio.ensure() 会把坏掉的 AudioContext 丢掉重建，双管齐下自愈。
+
+    private var audioWatchdog: Timer?
+
+    private func activateAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+        try? session.setActive(true, options: [.notifyOthersOnDeactivation])
+    }
+
+    private func startAudioWatchdog() {
+        stopAudioWatchdog()
+        let t = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in self?.checkAudio() }
+        RunLoop.main.add(t, forMode: .common)   // 滚动 / 手势时也要继续跑
+        audioWatchdog = t
+    }
+
+    private func stopAudioWatchdog() {
+        audioWatchdog?.invalidate()
+        audioWatchdog = nil
+    }
+
+    private func checkAudio() {
+        guard let web = webView, UIApplication.shared.applicationState == .active else { return }
+        // ensure() 自己会修；返回修完之后的状态
+        web.evaluateJavaScript("(window.__audio && window.__audio.ensure && window.__audio.ensure()) || 'none'") { [weak self] result, _ in
+            let state = (result as? String) ?? "none"
+            guard state != "running", state != "off" else { return }
+            // 页面修不好 → 多半是音频会话被系统停用了，重新激活，下一轮再让页面重建上下文
+            self?.activateAudioSession()
+        }
+    }
+
+    @objc private func audioInterruption(_ note: Notification) {
+        guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+        switch type {
+        case .began:
+            stopAudioWatchdog()
+        case .ended:
+            activateAudioSession()
+            checkAudio()
+            if UIApplication.shared.applicationState == .active { startAudioWatchdog() }
+        @unknown default:
+            break
+        }
+    }
+
+    @objc private func mediaServicesReset() {
+        activateAudioSession()
+        checkAudio()
     }
 
     // MARK: - 桥方法
